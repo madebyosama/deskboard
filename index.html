@@ -51,7 +51,11 @@
   #ws {
     position: relative; flex: 1; overflow: hidden;
     background-color: var(--desk);
-    background-image: radial-gradient(var(--desk-dot) 1.2px, transparent 1.3px);
+  }
+  #ws.grid {
+    background-image:
+      linear-gradient(var(--desk-dot) 1px, transparent 1px),
+      linear-gradient(90deg, var(--desk-dot) 1px, transparent 1px);
     background-size: 20px 20px;
   }
   #ws.busy iframe { pointer-events: none; }
@@ -140,6 +144,12 @@
   #toast button { background: none; border: 0; color: var(--accent); font-weight: 600; padding: 0; }
 
   @media (prefers-reduced-motion: reduce) { .panel.anim { transition: none; } }
+
+  /* ---------- zen mode ---------- */
+  body.zen .bar { display: none; }
+  body.zen .tb, body.zen .h { display: none; }
+  body.zen .panel { border-radius: 0; box-shadow: none; }
+  body.zen .body { border-radius: 0; }
 </style>
 </head>
 <body>
@@ -150,7 +160,9 @@
     <button class="btn primary" id="add">+ Add site</button>
     <button class="btn" id="tile">Tile all</button>
     <label class="chk"><input type="checkbox" id="snap" checked> Snap to grid</label>
+    <label class="chk"><input type="checkbox" id="grid" checked> Show grid</label>
     <button class="btn" id="lock" aria-pressed="false">Lock layout</button>
+    <button class="btn" id="zen" title="Hide chrome, Esc to exit">Zen mode</button>
     <span class="spacer"></span>
     <button class="btn" id="export">Export layout</button>
     <button class="btn" id="import">Import</button>
@@ -200,7 +212,7 @@
 
   const ws = document.getElementById("ws");
   const $ = id => document.getElementById(id);
-  const snapEl = $("snap"), lockBtn = $("lock");
+  const snapEl = $("snap"), gridEl = $("grid"), lockBtn = $("lock");
 
   const ICONS = {
     reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
@@ -214,6 +226,7 @@
   let panels = [];       // {id,title,url,x,y,w,h,z,max,prev}
   let zTop = 1;
   let locked = false;
+  let zen = false;
   let uid = 0;
   let lastRemoved = null;
 
@@ -237,7 +250,7 @@
 
   function save() {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ locked, snap: snapEl.checked, panels }));
+      localStorage.setItem(STORE, JSON.stringify({ locked, zen, snap: snapEl.checked, grid: gridEl.checked, panels }));
     } catch {}
   }
 
@@ -496,6 +509,7 @@
   $("add").onclick = () => openDialog(null);
   $("tile").onclick = () => tile(true);
   snapEl.onchange = save;
+  gridEl.onchange = () => { ws.classList.toggle("grid", gridEl.checked); save(); };
   function setLocked(v) {
     locked = v;
     lockBtn.setAttribute("aria-pressed", String(v));
@@ -504,6 +518,14 @@
     save();
   }
   lockBtn.onclick = () => setLocked(!locked);
+
+  function setZen(v) {
+    zen = v;
+    document.body.classList.toggle("zen", v);
+    save();
+  }
+  $("zen").onclick = () => setZen(!zen);
+  window.addEventListener("keydown", e => { if (e.key === "Escape" && zen) setZen(false); });
 
   $("export").onclick = () => {
     const blob = new Blob([JSON.stringify({ panels }, null, 2)], { type: "application/json" });
@@ -545,7 +567,24 @@
     syncEmpty();
   }
 
-  window.addEventListener("resize", () => panels.forEach(p => p.max && apply(p)));
+  // Any workspace resize (window resize, or the bar hiding/showing in zen mode)
+  // should rescale panels to fill the new space instead of leaving them stranded.
+  let wsW = ws.clientWidth, wsH = ws.clientHeight;
+  new ResizeObserver(() => {
+    const w = ws.clientWidth, h = ws.clientHeight;
+    const rx = wsW ? w / wsW : 1, ry = wsH ? h / wsH : 1;
+    if (rx !== 1 || ry !== 1) {
+      panels.forEach(p => {
+        if (!p.max) {
+          p.x = Math.round(p.x * rx); p.y = Math.round(p.y * ry);
+          p.w = Math.max(MIN_W, Math.round(p.w * rx)); p.h = Math.max(MIN_H, Math.round(p.h * ry));
+        }
+        apply(p);
+      });
+      save();
+    }
+    wsW = w; wsH = h;
+  }).observe(ws);
 
   // Clicking inside an iframe doesn't bubble to the page, but it does blur the window.
   window.addEventListener("blur", () => setTimeout(() => {
@@ -561,12 +600,15 @@
   try { saved = JSON.parse(localStorage.getItem(STORE)); } catch {}
   if (saved && Array.isArray(saved.panels)) {
     snapEl.checked = saved.snap !== false;
+    gridEl.checked = saved.grid !== false;
     load(saved.panels.map(clean));
     setLocked(!!saved.locked);
+    setZen(!!saved.zen);
   } else {
     load(DEFAULT_SITES.map(s => clean({ ...s })));
     tile(false);
   }
+  ws.classList.toggle("grid", gridEl.checked);
 })();
 </script>
 </body>
