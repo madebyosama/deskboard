@@ -1,310 +1,1221 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deskboard</title>
-<link rel="icon" href="favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --desk: #c9d3ce;
-    --desk-dot: #b4c0ba;
-    --ink: #1f2b27;
-    --bar: #26332f;
-    --bar-text: #e9efec;
-    --bar-muted: #9fb0a9;
-    --paper: #ffffff;
-    --accent: #e0a526;
-    --danger: #c8553d;
-    --radius: 10px;
-    font-family: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body { display: flex; flex-direction: column; background: var(--desk); color: var(--ink); overflow: hidden; }
-
-  /* ---------- toolbar ---------- */
-  .bar {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 8px 14px; background: var(--bar); color: var(--bar-text);
-    border-bottom: 3px solid var(--accent); z-index: 100000; position: relative;
-  }
-  .brand { font-weight: 700; font-size: 17px; letter-spacing: .2px; margin-right: 6px; }
-  .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; }
-  .spacer { flex: 1; }
-  button { font: inherit; cursor: pointer; }
-  .btn {
-    background: transparent; color: var(--bar-text); border: 1px solid #47574f;
-    border-radius: 7px; padding: 6px 12px; font-size: 13.5px; font-weight: 500;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .btn:hover { background: #33443e; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #2a2208; font-weight: 600; }
-  .btn.primary:hover { background: #ecb537; }
-  .btn[aria-pressed="true"] { background: #f0d38a; border-color: #f0d38a; color: #2a2208; }
-  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--bar-muted); cursor: pointer; }
-  .chk input { accent-color: var(--accent); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  /* ---------- workspace ---------- */
-  #ws {
-    position: relative; flex: 1; overflow: hidden;
-    background-color: var(--desk);
-  }
-  #ws.grid {
-    background-image:
-      linear-gradient(var(--desk-dot) 1px, transparent 1px),
-      linear-gradient(90deg, var(--desk-dot) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-  #ws.busy iframe { pointer-events: none; }
-  #ws.busy { user-select: none; }
-  #ws.empty::after {
-    content: "No panels yet. Use “Add site” to embed a page.";
-    position: absolute; inset: 0; display: grid; place-items: center; color: #5b6d66; font-size: 15px;
-  }
-
-  /* ---------- panels ---------- */
-  .panel {
-    position: absolute; display: flex; flex-direction: column;
-    background: var(--paper); border-radius: var(--radius); overflow: visible;
-    box-shadow: 0 1px 2px rgba(20,30,26,.25), 0 6px 18px rgba(20,30,26,.18);
-  }
-  .panel.anim { transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease; }
-  .panel.active { box-shadow: 0 0 0 2px var(--accent), 0 10px 28px rgba(20,30,26,.28); }
-  .tb {
-    height: 34px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px;
-    background: var(--bar); color: var(--bar-text); border-radius: var(--radius) var(--radius) 0 0;
-    cursor: grab; touch-action: none; user-select: none;
-  }
-  .tb:active { cursor: grabbing; }
-  .locked .tb, .panel.max .tb { cursor: default; }
-  .grip { color: var(--bar-muted); letter-spacing: -2px; font-size: 12px; line-height: 1; }
-  .locked .grip { display: none; }
-  .ttl { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .acts { display: flex; gap: 2px; }
-  .ib {
-    width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px;
-    background: transparent; color: var(--bar-muted);
-  }
-  .ib:hover { background: #3a4c45; color: #fff; }
-  .ib.x:hover { background: var(--danger); }
-  .ib svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .body { position: relative; flex: 1; min-height: 0; background: #f3f5f4; border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; }
-  .body .loading { position: absolute; inset: 0; display: grid; place-items: center; color: #7b8b85; font-size: 13px; }
-  .body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
-
-  .slot { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; text-align: center; }
-  .slot p { margin: 0; font-size: 14px; color: #5b6d66; }
-  .slot .row { display: flex; gap: 6px; width: min(100%, 360px); }
-  .slot input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid #b8c5bf; border-radius: 7px; font: inherit; font-size: 14px; }
-  .slot .btn { color: var(--ink); border-color: #b8c5bf; }
-  .slot .btn:hover { background: #e4eae7; }
-
-  /* resize handles */
-  .h { position: absolute; z-index: 2; touch-action: none; }
-  .locked .h, .panel.max .h { display: none; }
-  .h[data-d="n"]  { top: -4px; left: 10px; right: 10px; height: 9px; cursor: ns-resize; }
-  .h[data-d="s"]  { bottom: -4px; left: 10px; right: 10px; height: 9px; cursor: ns-resize; }
-  .h[data-d="e"]  { right: -4px; top: 10px; bottom: 10px; width: 9px; cursor: ew-resize; }
-  .h[data-d="w"]  { left: -4px; top: 10px; bottom: 10px; width: 9px; cursor: ew-resize; }
-  .h[data-d="ne"] { top: -5px; right: -5px; width: 16px; height: 16px; cursor: nesw-resize; }
-  .h[data-d="nw"] { top: -5px; left: -5px; width: 16px; height: 16px; cursor: nwse-resize; }
-  .h[data-d="se"] { bottom: -5px; right: -5px; width: 18px; height: 18px; cursor: nwse-resize; }
-  .h[data-d="sw"] { bottom: -5px; left: -5px; width: 16px; height: 16px; cursor: nesw-resize; }
-  .h[data-d="se"]::after {
-    content: ""; position: absolute; right: 7px; bottom: 7px; width: 9px; height: 9px;
-    border-right: 2px solid rgba(255,255,255,.85); border-bottom: 2px solid rgba(38,51,47,.55); opacity: 0;
-  }
-  .panel:hover .h[data-d="se"]::after { opacity: 1; }
-
-  /* dialog */
-  dialog { border: 0; border-radius: 12px; padding: 0; width: min(460px, 92vw); box-shadow: 0 20px 60px rgba(0,0,0,.35); color: var(--ink); }
-  dialog::backdrop { background: rgba(20,30,26,.5); }
-  .dlg { padding: 20px; display: grid; gap: 12px; }
-  .dlg h2 { margin: 0; font-size: 18px; }
-  .dlg label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
-  .dlg input[type=text], .dlg input[type=url] { padding: 9px 10px; border: 1px solid #b8c5bf; border-radius: 7px; font: inherit; font-weight: 400; font-size: 14px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { border: 1px solid #b8c5bf; background: #f3f5f4; color: var(--ink); border-radius: 999px; padding: 4px 11px; font-size: 12.5px; }
-  .chip:hover { background: #e4eae7; }
-  .hint { margin: 0; font-size: 12.5px; color: #5b6d66; line-height: 1.45; }
-  .dlg .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-  .dlg .btn { color: var(--ink); border-color: #b8c5bf; }
-  .dlg .btn:hover { background: #e4eae7; }
-  .dlg .btn.primary { color: #2a2208; border-color: var(--accent); }
-
-  /* toast */
-  #toast {
-    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 200000;
-    background: var(--bar); color: var(--bar-text); border-radius: 8px; padding: 9px 14px; font-size: 13.5px;
-    display: none; align-items: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3);
-  }
-  #toast button { background: none; border: 0; color: var(--accent); font-weight: 600; padding: 0; }
-
-  @media (prefers-reduced-motion: reduce) { .panel.anim { transition: none; } }
-
-  /* ---------- zen mode ---------- */
-  body.zen .bar { display: none; }
-  body.zen .tb, body.zen .h { display: none; }
-  body.zen .panel { border-radius: 0; box-shadow: none; }
-  body.zen .body { border-radius: 0; }
-</style>
-</head>
-<body>
-
-<header class="bar">
-  <div class="brand">Deskboard</div>
-  <div class="tools">
-    <button class="btn primary" id="add">+ Add site</button>
-    <button class="btn" id="tile">Tile all</button>
-    <label class="chk"><input type="checkbox" id="snap" checked> Snap to grid</label>
-    <label class="chk"><input type="checkbox" id="grid" checked> Show grid</label>
-    <button class="btn" id="lock" aria-pressed="false">Lock layout</button>
-    <button class="btn" id="zen" title="Hide chrome, Esc to exit">Zen mode</button>
-    <span class="spacer"></span>
-    <button class="btn" id="export">Export layout</button>
-    <button class="btn" id="import">Import</button>
-    <button class="btn" id="reset">Reset</button>
-    <input type="file" id="file" accept="application/json" hidden>
-  </div>
-</header>
-
-<main id="ws"></main>
-
-<dialog id="dlg">
-  <form method="dialog" class="dlg" id="form">
-    <h2 id="dlgTitle">Add site</h2>
-    <div class="chips" id="chips" aria-label="Quick picks"></div>
-    <label>Name
-      <input type="text" id="fTitle" placeholder="e.g. Pomodoro" autocomplete="off">
-    </label>
-    <label>Address
-      <input type="text" id="fUrl" placeholder="https://example.com" autocomplete="off" required>
-    </label>
-    <p class="hint">Some sites refuse to be shown inside another page. If a panel stays blank or shows an error, use the ↗ button in its title bar to open it in a tab instead. Spotify links are converted to the embeddable player automatically.</p>
-    <div class="foot">
-      <button type="button" class="btn" id="cancel">Cancel</button>
-      <button type="submit" class="btn primary" id="save">Add panel</button>
-    </div>
-  </form>
-</dialog>
-
-<div id="toast" role="status"><span id="toastMsg"></span><button id="toastUndo">Undo</button></div>
-
-<script>
-(() => {
-  "use strict";
-
-  const STORE = "deskboard.v1";
-  const GRID = 10, MIN_W = 220, MIN_H = 140, GAP = 10;
-
-  const PRESETS = [
-    { title: "Pomodoro",   url: "https://pomofocus.io" },
-    { title: "Flip clock", url: "https://flipclock.madebyosama.com" },
-    { title: "Spotify",    url: "https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ" },
-    { title: "Excalidraw", url: "https://excalidraw.com" },
-    { title: "Tweek",      url: "https://tweek.so" },
-  ];
-  // five presets + one empty slot you can fill with anything
-  const DEFAULT_SITES = [...PRESETS, { title: "Your site", url: "" }];
-
-  const ws = document.getElementById("ws");
-  const $ = id => document.getElementById(id);
-  const snapEl = $("snap"), gridEl = $("grid"), lockBtn = $("lock");
-
-  const ICONS = {
-    reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
-    open:   '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
-    edit:   '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
-    max:    '<rect x="5" y="5" width="14" height="14" rx="1.5"/>',
-    close:  '<path d="M6 6l12 12M18 6L6 18"/>',
-  };
-  const icon = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
-
-  let panels = [];       // {id,title,url,x,y,w,h,z,max,prev}
-  let zTop = 1;
-  let locked = false;
-  let zen = false;
-  let uid = 0;
-  let lastRemoved = null;
-
-  /* ---------- helpers ---------- */
-  const snapv = v => snapEl.checked ? Math.round(v / GRID) * GRID : Math.round(v);
-  const newId = () => "p" + Date.now().toString(36) + (uid++);
-
-  function normalizeUrl(raw) {
-    raw = (raw || "").trim();
-    if (!raw) return "";
-    if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
-    try {
-      const u = new URL(raw);
-      if (u.hostname === "open.spotify.com" && !u.pathname.startsWith("/embed")) {
-        u.pathname = "/embed" + u.pathname;
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deskboard</title>
+    <link rel="icon" href="favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --desk: #c9d3ce;
+        --desk-dot: #b4c0ba;
+        --ink: #1f2b27;
+        --bar: #26332f;
+        --bar-text: #e9efec;
+        --bar-muted: #9fb0a9;
+        --paper: #ffffff;
+        --accent: #e0a526;
+        --danger: #c8553d;
+        --radius: 10px;
+        font-family:
+          "Figtree",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
       }
-      return u.toString();
-    } catch { return null; }
-  }
-  const hostOf = u => { try { return new URL(u).hostname; } catch { return ""; } };
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        background: var(--desk);
+        color: var(--ink);
+        overflow: hidden;
+      }
 
-  function save() {
-    try {
-      localStorage.setItem(STORE, JSON.stringify({ locked, zen, snap: snapEl.checked, grid: gridEl.checked, panels }));
-    } catch {}
-  }
+      /* ---------- toolbar ---------- */
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 8px 14px;
+        background: var(--bar);
+        color: var(--bar-text);
+        border-bottom: 3px solid var(--accent);
+        z-index: 100000;
+        position: relative;
+      }
+      .brand {
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: 0.2px;
+        margin-right: 6px;
+      }
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        flex: 1;
+      }
+      .spacer {
+        flex: 1;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+      .btn {
+        background: transparent;
+        color: var(--bar-text);
+        border: 1px solid #47574f;
+        border-radius: 7px;
+        padding: 6px 12px;
+        font-size: 13.5px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn:hover {
+        background: #33443e;
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #2a2208;
+        font-weight: 600;
+      }
+      .btn.primary:hover {
+        background: #ecb537;
+      }
+      .btn[aria-pressed="true"] {
+        background: #f0d38a;
+        border-color: #f0d38a;
+        color: #2a2208;
+      }
+      .chk {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13.5px;
+        color: var(--bar-muted);
+        cursor: pointer;
+      }
+      .chk input {
+        accent-color: var(--accent);
+      }
+      .chk.off {
+        opacity: 0.5;
+        cursor: default;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
 
-  /* ---------- layout ---------- */
-  function tile(animate = true) {
-    const W = ws.clientWidth, H = ws.clientHeight, n = panels.length;
-    if (!n) return;
-    const cols = n <= 3 ? n : n <= 6 ? 3 : Math.ceil(Math.sqrt(n));
-    const rows = Math.ceil(n / cols);
-    const cw = (W - GAP * (cols + 1)) / cols;
-    const ch = (H - GAP * (rows + 1)) / rows;
-    panels.forEach((p, i) => {
-      const c = i % cols, r = Math.floor(i / cols);
-      p.max = false;
-      p.x = Math.round(GAP + c * (cw + GAP));
-      p.y = Math.round(GAP + r * (ch + GAP));
-      p.w = Math.max(MIN_W, Math.round(cw));
-      p.h = Math.max(MIN_H, Math.round(ch));
-      const el = elOf(p.id);
-      if (animate) { el.classList.add("anim"); setTimeout(() => el.classList.remove("anim"), 300); }
-      apply(p);
-    });
-    save();
-  }
+      /* ---------- workspace ---------- */
+      #ws {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+        background-color: var(--desk);
+      }
+      #ws.grid {
+        background-image:
+          linear-gradient(var(--desk-dot) 1px, transparent 1px),
+          linear-gradient(90deg, var(--desk-dot) 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+      #ws.busy iframe {
+        pointer-events: none;
+      }
+      #ws.busy {
+        user-select: none;
+      }
+      #ws.empty::after {
+        content: "No panels yet. Use “Add site” to embed a page.";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: var(--desk);
+        color: #5b6d66;
+        font-size: 15px;
+        white-space: nowrap;
+      }
 
-  const elOf = id => ws.querySelector(`[data-id="${id}"]`);
+      /* ---------- panels ---------- */
+      .panel {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        background: var(--paper);
+        border-radius: var(--radius);
+        overflow: visible;
+        box-shadow:
+          0 1px 2px rgba(20, 30, 26, 0.25),
+          0 6px 18px rgba(20, 30, 26, 0.18);
+      }
+      .panel.anim {
+        transition:
+          left 0.25s ease,
+          top 0.25s ease,
+          width 0.25s ease,
+          height 0.25s ease;
+      }
+      .panel.active {
+        box-shadow:
+          0 0 0 2px var(--accent),
+          0 10px 28px rgba(20, 30, 26, 0.28);
+      }
+      .tb {
+        height: 34px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 6px 0 10px;
+        background: var(--bar);
+        color: var(--bar-text);
+        border-radius: var(--radius) var(--radius) 0 0;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+      }
+      .tb:active {
+        cursor: grabbing;
+      }
+      .locked .tb,
+      .panel.max .tb {
+        cursor: default;
+      }
+      .grip {
+        color: var(--bar-muted);
+        letter-spacing: -2px;
+        font-size: 12px;
+        line-height: 1;
+      }
+      .locked .grip {
+        display: none;
+      }
+      .ttl {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .acts {
+        display: flex;
+        gap: 2px;
+      }
+      .ib {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--bar-muted);
+      }
+      .ib:hover {
+        background: #3a4c45;
+        color: #fff;
+      }
+      .ib.x:hover {
+        background: var(--danger);
+      }
+      .ib svg {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .body {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        background: #f3f5f4;
+        border-radius: 0 0 var(--radius) var(--radius);
+        overflow: hidden;
+      }
+      .body .loading {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: #7b8b85;
+        font-size: 13px;
+      }
+      .body iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
+      }
 
-  function apply(p) {
-    const el = elOf(p.id);
-    if (!el) return;
-    if (p.max) { p.x = 0; p.y = 0; p.w = ws.clientWidth; p.h = ws.clientHeight; }
-    el.style.left = p.x + "px";
-    el.style.top = p.y + "px";
-    el.style.width = p.w + "px";
-    el.style.height = p.h + "px";
-    el.style.zIndex = p.z;
-    el.classList.toggle("max", !!p.max);
-  }
+      .slot {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 16px;
+        text-align: center;
+      }
+      .slot p {
+        margin: 0;
+        font-size: 14px;
+        color: #5b6d66;
+      }
+      .slot .row {
+        display: flex;
+        gap: 6px;
+        width: min(100%, 360px);
+      }
+      .slot input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 10px;
+        border: 1px solid #b8c5bf;
+        border-radius: 7px;
+        font: inherit;
+        font-size: 14px;
+      }
+      .slot .btn {
+        color: var(--ink);
+        border-color: #b8c5bf;
+      }
+      .slot .btn:hover {
+        background: #e4eae7;
+      }
 
-  function raise(p) {
-    p.z = ++zTop;
-    ws.querySelectorAll(".panel").forEach(e => e.classList.toggle("active", e.dataset.id === p.id));
-    elOf(p.id).style.zIndex = p.z;
-  }
+      /* swap by dropping one panel onto another */
+      .panel.swapping {
+        opacity: 0.5;
+      }
+      .panel.swap-target::after {
+        content: "Swap";
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        pointer-events: none;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--bar);
+        border: 2px dashed var(--accent);
+        border-radius: var(--radius);
+        background: rgba(224, 165, 38, 0.2);
+      }
 
-  /* ---------- panel DOM ---------- */
-  function build(p) {
-    const el = document.createElement("section");
-    el.className = "panel";
-    el.dataset.id = p.id;
-    el.innerHTML = `
+      /* layout slots you can drop panels into */
+      #zones {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        transition: background 0.15s;
+      }
+      #zones.active {
+        background: rgba(31, 43, 39, 0.35);
+      }
+      #zones.hide-idle:not(.active) {
+        visibility: hidden;
+      }
+      .zone {
+        position: absolute;
+        border: 2px dashed rgba(38, 51, 47, 0.3);
+        border-radius: var(--radius);
+      }
+      #zones.active .zone {
+        border-color: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.08);
+      }
+      #zones.active .zone.hot {
+        border: 2px solid var(--accent);
+        background: rgba(224, 165, 38, 0.32);
+      }
+      .zone.hot::after {
+        content: attr(data-label);
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+      }
+
+      /* resize handles */
+      .h {
+        position: absolute;
+        z-index: 2;
+        touch-action: none;
+      }
+      .locked .h,
+      .panel.max .h {
+        display: none;
+      }
+      .h[data-d="n"] {
+        top: -4px;
+        left: 10px;
+        right: 10px;
+        height: 9px;
+        cursor: ns-resize;
+      }
+      .h[data-d="s"] {
+        bottom: -4px;
+        left: 10px;
+        right: 10px;
+        height: 9px;
+        cursor: ns-resize;
+      }
+      .h[data-d="e"] {
+        right: -4px;
+        top: 10px;
+        bottom: 10px;
+        width: 9px;
+        cursor: ew-resize;
+      }
+      .h[data-d="w"] {
+        left: -4px;
+        top: 10px;
+        bottom: 10px;
+        width: 9px;
+        cursor: ew-resize;
+      }
+      .h[data-d="ne"] {
+        top: -5px;
+        right: -5px;
+        width: 16px;
+        height: 16px;
+        cursor: nesw-resize;
+      }
+      .h[data-d="nw"] {
+        top: -5px;
+        left: -5px;
+        width: 16px;
+        height: 16px;
+        cursor: nwse-resize;
+      }
+      .h[data-d="se"] {
+        bottom: -5px;
+        right: -5px;
+        width: 18px;
+        height: 18px;
+        cursor: nwse-resize;
+      }
+      .h[data-d="sw"] {
+        bottom: -5px;
+        left: -5px;
+        width: 16px;
+        height: 16px;
+        cursor: nesw-resize;
+      }
+      .h[data-d="se"]::after {
+        content: "";
+        position: absolute;
+        right: 7px;
+        bottom: 7px;
+        width: 9px;
+        height: 9px;
+        border-right: 2px solid rgba(255, 255, 255, 0.85);
+        border-bottom: 2px solid rgba(38, 51, 47, 0.55);
+        opacity: 0;
+      }
+      .panel:hover .h[data-d="se"]::after {
+        opacity: 1;
+      }
+
+      /* layout menu */
+      .menu-wrap {
+        position: relative;
+      }
+      .menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 1;
+        width: min(312px, calc(100vw - 32px));
+        padding: 12px;
+        display: none;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
+        background: var(--bar);
+        border: 1px solid #47574f;
+        border-radius: 10px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+      }
+      .menu.open {
+        display: grid;
+        gap: 10px;
+      }
+      .menu h3 {
+        margin: 0;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--bar-muted);
+      }
+      .lay-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .lay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 4px 6px;
+        background: transparent;
+        color: var(--bar-text);
+        border: 1px solid #47574f;
+        border-radius: 8px;
+        font-size: 11.5px;
+      }
+      .lay:hover {
+        background: #33443e;
+      }
+      .lay svg {
+        width: 60px;
+        height: 40px;
+        display: block;
+      }
+      .lay rect {
+        fill: #5f736b;
+      }
+      .lay[aria-checked="true"] {
+        border-color: var(--accent);
+      }
+      .lay[aria-checked="true"] rect {
+        fill: var(--accent);
+      }
+      .seg {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .seg button {
+        padding: 7px 6px;
+        font-size: 12.5px;
+        color: var(--bar-text);
+        background: transparent;
+        border: 1px solid #47574f;
+        border-radius: 8px;
+      }
+      .seg button:hover {
+        background: #33443e;
+      }
+      .seg button[aria-checked="true"] {
+        border-color: var(--accent);
+        background: rgba(224, 165, 38, 0.16);
+      }
+      .lay.wide {
+        flex-direction: row;
+        justify-content: center;
+        gap: 8px;
+        font-size: 13px;
+        padding: 7px 10px;
+      }
+      .custom {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--bar-muted);
+      }
+      .custom input {
+        width: 48px;
+        padding: 5px 6px;
+        font: inherit;
+        font-size: 13px;
+        color: var(--bar-text);
+        background: #1c2623;
+        border: 1px solid #47574f;
+        border-radius: 6px;
+      }
+      .custom .btn {
+        margin-left: auto;
+        padding: 5px 10px;
+      }
+
+      /* dialog */
+      dialog {
+        border: 0;
+        border-radius: 12px;
+        padding: 0;
+        width: min(460px, 92vw);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        color: var(--ink);
+      }
+      dialog::backdrop {
+        background: rgba(20, 30, 26, 0.5);
+      }
+      .dlg {
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+      }
+      .dlg h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .dlg label {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .dlg input[type="text"],
+      .dlg input[type="url"] {
+        padding: 9px 10px;
+        border: 1px solid #b8c5bf;
+        border-radius: 7px;
+        font: inherit;
+        font-weight: 400;
+        font-size: 14px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        border: 1px solid #b8c5bf;
+        background: #f3f5f4;
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 12.5px;
+      }
+      .chip:hover {
+        background: #e4eae7;
+      }
+      .hint {
+        margin: 0;
+        font-size: 12.5px;
+        color: #5b6d66;
+        line-height: 1.45;
+      }
+      .dlg .foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      .dlg .btn {
+        color: var(--ink);
+        border-color: #b8c5bf;
+      }
+      .dlg .btn:hover {
+        background: #e4eae7;
+      }
+      .dlg .btn.primary {
+        color: #2a2208;
+        border-color: var(--accent);
+      }
+
+      /* toast */
+      #toast {
+        position: fixed;
+        left: 50%;
+        bottom: 20px;
+        transform: translateX(-50%);
+        z-index: 200000;
+        background: var(--bar);
+        color: var(--bar-text);
+        border-radius: 8px;
+        padding: 9px 14px;
+        font-size: 13.5px;
+        display: none;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      }
+      #toast button {
+        background: none;
+        border: 0;
+        color: var(--accent);
+        font-weight: 600;
+        padding: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .panel.anim {
+          transition: none;
+        }
+      }
+
+      /* ---------- zen mode ---------- */
+      body.zen .bar {
+        display: none;
+      }
+      body.zen .tb,
+      body.zen .h {
+        display: none;
+      }
+      body.zen .panel {
+        border-radius: 0;
+        box-shadow: none;
+      }
+      body.zen .body {
+        border-radius: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <div class="brand">Deskboard</div>
+      <div class="tools">
+        <button class="btn primary" id="add">+ Add site</button>
+        <div class="menu-wrap">
+          <button
+            class="btn"
+            id="layoutBtn"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="layoutMenu"
+          >
+            Layout ▾
+          </button>
+          <div class="menu" id="layoutMenu" role="menu" aria-label="Layouts">
+            <h3>When I pick a layout</h3>
+            <div
+              class="seg"
+              role="radiogroup"
+              aria-label="When I pick a layout"
+            >
+              <button
+                role="radio"
+                aria-checked="true"
+                data-mode="auto"
+                title="Panels move into the layout straight away"
+              >
+                Auto-arrange
+              </button>
+              <button
+                role="radio"
+                aria-checked="false"
+                data-mode="drop"
+                title="Show empty slots; drag each panel into the one you want"
+              >
+                Drop in myself
+              </button>
+            </div>
+            <button
+              class="lay wide"
+              role="menuitemradio"
+              aria-checked="false"
+              data-l="auto"
+              title="Fit every panel in an even grid"
+            >
+              Auto tile (fit every panel)
+            </button>
+            <h3>Presets</h3>
+            <div class="lay-grid" id="layGrid"></div>
+            <h3>Masonry</h3>
+            <div class="lay-grid" id="masonryGrid"></div>
+            <h3>Custom grid</h3>
+            <div class="custom">
+              <input
+                type="number"
+                id="cCols"
+                min="1"
+                max="6"
+                value="3"
+                aria-label="Columns"
+              />
+              columns ×
+              <input
+                type="number"
+                id="cRows"
+                min="1"
+                max="4"
+                value="2"
+                aria-label="Rows"
+              />
+              rows
+              <button class="btn" id="cApply">Apply</button>
+            </div>
+          </div>
+        </div>
+        <label class="chk"
+          ><input type="checkbox" id="snap" checked /> Snap to grid</label
+        >
+        <label class="chk"
+          ><input type="checkbox" id="grid" checked /> Show grid</label
+        >
+        <label class="chk" id="slotsLbl"
+          ><input type="checkbox" id="slots" checked /> Show slots</label
+        >
+        <button class="btn" id="lock" aria-pressed="false">Lock layout</button>
+        <button class="btn" id="zen" title="Hide chrome, Esc to exit">
+          Zen mode
+        </button>
+        <span class="spacer"></span>
+        <button class="btn" id="export">Export layout</button>
+        <button class="btn" id="import">Import</button>
+        <button class="btn" id="reset">Reset</button>
+        <input type="file" id="file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <main id="ws"><div id="zones" aria-hidden="true"></div></main>
+
+    <dialog id="dlg">
+      <form method="dialog" class="dlg" id="form">
+        <h2 id="dlgTitle">Add site</h2>
+        <div class="chips" id="chips" aria-label="Quick picks"></div>
+        <label
+          >Name
+          <input
+            type="text"
+            id="fTitle"
+            placeholder="e.g. Pomodoro"
+            autocomplete="off"
+          />
+        </label>
+        <label
+          >Address
+          <input
+            type="text"
+            id="fUrl"
+            placeholder="https://example.com"
+            autocomplete="off"
+            required
+          />
+        </label>
+        <p class="hint">
+          Some sites refuse to be shown inside another page. If a panel stays
+          blank or shows an error, use the ↗ button in its title bar to open it
+          in a tab instead. Spotify links are converted to the embeddable player
+          automatically.
+        </p>
+        <div class="foot">
+          <button type="button" class="btn" id="cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="save">Add panel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" role="status">
+      <span id="toastMsg"></span><button id="toastUndo">Undo</button>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const STORE = "deskboard.v1";
+        const GRID = 10,
+          MIN_W = 220,
+          MIN_H = 140,
+          GAP = 10;
+
+        const PRESETS = [
+          { title: "Pomodoro", url: "https://pomofocus.io" },
+          { title: "Flip clock", url: "https://flipclock.madebyosama.com" },
+          {
+            title: "Spotify",
+            url: "https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ",
+          },
+          { title: "Excalidraw", url: "https://excalidraw.com" },
+          { title: "Tweek", url: "https://tweek.so" },
+        ];
+        // five presets + one empty slot you can fill with anything
+        const DEFAULT_SITES = [...PRESETS, { title: "Your site", url: "" }];
+
+        const ws = document.getElementById("ws");
+        const $ = (id) => document.getElementById(id);
+        const snapEl = $("snap"),
+          gridEl = $("grid"),
+          slotsEl = $("slots"),
+          lockBtn = $("lock");
+
+        const ICONS = {
+          reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+          open: '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+          edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+          max: '<rect x="5" y="5" width="14" height="14" rx="1.5"/>',
+          close: '<path d="M6 6l12 12M18 6L6 18"/>',
+        };
+        const icon = (k) =>
+          `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+
+        let panels = []; // {id,title,url,x,y,w,h,z,max,prev}
+        let zTop = 1;
+        let locked = false;
+        let zen = false;
+        let uid = 0;
+        let lastRemoved = null;
+        let layout = "auto"; // id of the layout last applied
+        let zones = []; // that layout's cells, kept as slots panels can be dropped into
+        let placeMode = "auto"; // "auto": picking a layout moves panels; "drop": it only shows the slots
+
+        /* ---------- helpers ---------- */
+        const snapv = (v) =>
+          snapEl.checked ? Math.round(v / GRID) * GRID : Math.round(v);
+        const newId = () => "p" + Date.now().toString(36) + uid++;
+
+        function normalizeUrl(raw) {
+          raw = (raw || "").trim();
+          if (!raw) return "";
+          if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
+          try {
+            const u = new URL(raw);
+            if (
+              u.hostname === "open.spotify.com" &&
+              !u.pathname.startsWith("/embed")
+            ) {
+              u.pathname = "/embed" + u.pathname;
+            }
+            return u.toString();
+          } catch {
+            return null;
+          }
+        }
+        const hostOf = (u) => {
+          try {
+            return new URL(u).hostname;
+          } catch {
+            return "";
+          }
+        };
+
+        function save() {
+          try {
+            localStorage.setItem(
+              STORE,
+              JSON.stringify({
+                locked,
+                zen,
+                layout,
+                zones,
+                placeMode,
+                snap: snapEl.checked,
+                grid: gridEl.checked,
+                slots: slotsEl.checked,
+                panels,
+              }),
+            );
+          } catch {}
+        }
+
+        /* ---------- layout ---------- */
+        // A layout is a list of cells [x, y, w, h] in fractions of the workspace.
+        const gridCells = (cols, rows) =>
+          Array.from({ length: cols * rows }, (_, i) => [
+            (i % cols) / cols,
+            Math.floor(i / cols) / rows,
+            1 / cols,
+            1 / rows,
+          ]);
+
+        const LAYOUTS = [
+          { id: "1", name: "Single", cells: gridCells(1, 1) },
+          { id: "2c", name: "2 columns", cells: gridCells(2, 1) },
+          { id: "3c", name: "3 columns", cells: gridCells(3, 1) },
+          { id: "4c", name: "4 columns", cells: gridCells(4, 1) },
+          { id: "2r", name: "2 rows", cells: gridCells(1, 2) },
+          { id: "2x2", name: "2 × 2", cells: gridCells(2, 2) },
+          { id: "3x2", name: "3 × 2", cells: gridCells(3, 2) },
+          {
+            id: "side",
+            name: "Main + side",
+            cells: [
+              [0, 0, 2 / 3, 1],
+              [2 / 3, 0, 1 / 3, 1],
+            ],
+          },
+          {
+            id: "focus",
+            name: "Focus",
+            cells: [
+              [0, 0, 0.25, 1],
+              [0.25, 0, 0.5, 1],
+              [0.75, 0, 0.25, 1],
+            ],
+          },
+          {
+            id: "l1r2",
+            name: "1 + 2",
+            cells: [
+              [0, 0, 0.5, 1],
+              [0.5, 0, 0.5, 0.5],
+              [0.5, 0.5, 0.5, 0.5],
+            ],
+          },
+          {
+            id: "l2r1",
+            name: "2 + 1",
+            cells: [
+              [0, 0, 0.5, 0.5],
+              [0, 0.5, 0.5, 0.5],
+              [0.5, 0, 0.5, 1],
+            ],
+          },
+          {
+            id: "t1b2",
+            name: "1 over 2",
+            cells: [
+              [0, 0, 1, 0.5],
+              [0, 0.5, 0.5, 0.5],
+              [0.5, 0.5, 0.5, 0.5],
+            ],
+          },
+        ];
+
+        function animateEl(el) {
+          el.classList.add("anim");
+          setTimeout(() => el.classList.remove("anim"), 300);
+        }
+
+        // Put panels into the cells in order. Missing cells get an empty "paste a link" panel,
+        // spare empty panels are dropped, and spare panels with content float on top.
+        // Pixel rect of a layout cell in the current workspace.
+        function cellRect([fx, fy, fw, fh]) {
+          const W = ws.clientWidth,
+            H = ws.clientHeight;
+          return {
+            x: Math.round(GAP + fx * (W - GAP)),
+            y: Math.round(GAP + fy * (H - GAP)),
+            w: Math.max(MIN_W, Math.round(fw * (W - GAP) - GAP)),
+            h: Math.max(MIN_H, Math.round(fh * (H - GAP) - GAP)),
+          };
+        }
+
+        const zonesEl = $("zones");
+        function renderZones() {
+          zonesEl.innerHTML = zones
+            .map((c) => {
+              const r = cellRect(c);
+              return `<div class="zone" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px"></div>`;
+            })
+            .join("");
+        }
+
+        function applyLayout(cells, id, animate = true) {
+          // Auto tile (also what first load and Reset use) isn't a chosen layout, so it leaves no drop slots.
+          zones = id === "auto" ? [] : cells;
+          renderZones();
+          if (placeMode === "drop" && id !== "auto") {
+            layout = id;
+            markLayout();
+            save();
+            toast(
+              "Drag each panel into a slot. Drop on a filled slot to swap.",
+            );
+            return;
+          }
+          const need = cells.length;
+          for (let i = panels.length - 1; i >= 0 && panels.length > need; i--) {
+            if (!panels[i].url) {
+              elOf(panels[i].id).remove();
+              panels.splice(i, 1);
+            }
+          }
+          while (panels.length < need) {
+            const p = clean({ title: "Your site", url: "" });
+            p.z = ++zTop;
+            panels.push(p);
+            build(p);
+          }
+          const W = ws.clientWidth,
+            H = ws.clientHeight;
+          panels.forEach((p, i) => {
+            p.max = false;
+            if (i < need) {
+              Object.assign(p, cellRect(cells[i]));
+            } else {
+              const k = i - need;
+              p.w = Math.min(520, W - 40);
+              p.h = Math.min(420, H - 40);
+              p.x = Math.max(0, Math.round((W - p.w) / 2 + k * 30));
+              p.y = Math.max(0, Math.round((H - p.h) / 2 + k * 30));
+              p.z = ++zTop;
+            }
+            if (animate) animateEl(elOf(p.id));
+            apply(p);
+          });
+          layout = id;
+          markLayout();
+          syncEmpty();
+          save();
+          const extra = panels.length - need;
+          if (extra > 0)
+            toast(
+              `${extra} panel${extra > 1 ? "s don’t" : " doesn’t"} fit this layout and ${extra > 1 ? "are" : "is"} floating on top.`,
+            );
+        }
+
+        // Masonry: equal-width columns, each panel dropped into the shortest column and
+        // keeping its size relative to the others, then every column stretched to fill.
+        // "rows" variants do the same sideways: equal-height rows of varying widths.
+        const MASONRY = [
+          { id: "masonry", name: "Auto" },
+          { id: "masonry-2", name: "2 columns", cols: 2 },
+          { id: "masonry-3", name: "3 columns", cols: 3 },
+          { id: "masonry-4", name: "4 columns", cols: 4 },
+          { id: "masonry-r2", name: "2 rows", cols: 2, rows: true },
+          { id: "masonry-r3", name: "3 rows", cols: 3, rows: true },
+        ];
+        // Used when panels are all the same size (e.g. straight after a grid), which would otherwise just give another grid.
+        const STAGGER = [1.4, 0.7, 1.1, 1.2, 0.8, 0.9];
+
+        // Scale shares (summing to 1) so none is below `min`, keeping the rest proportional.
+        function fitMin(fs, min) {
+          if (min * fs.length >= 1) return fs.map(() => 1 / fs.length);
+          const fixed = new Set();
+          for (;;) {
+            const free = fs.map((_, i) => i).filter((i) => !fixed.has(i));
+            const room = 1 - fixed.size * min,
+              sum = free.reduce((a, i) => a + fs[i], 0);
+            const out = fs.map((f, i) =>
+              fixed.has(i) ? min : (f / sum) * room,
+            );
+            const low = free.filter((i) => out[i] < min);
+            if (!low.length) return out;
+            low.forEach((i) => fixed.add(i));
+          }
+        }
+
+        // `min` is the smallest share a panel may get along its column (so it stays above MIN_W/MIN_H).
+        function masonryCells(weights, cols, rows, min = 0) {
+          const colH = Array(cols).fill(0),
+            colOf = weights.map((w) => {
+              const c = colH.indexOf(Math.min(...colH));
+              colH[c] += w;
+              return c;
+            });
+          const share = weights.map(() => 0);
+          for (let c = 0; c < cols; c++) {
+            const idx = colOf
+              .map((cc, i) => (cc === c ? i : -1))
+              .filter((i) => i >= 0);
+            fitMin(
+              idx.map((i) => weights[i] / colH[c]),
+              min,
+            ).forEach((f, k) => {
+              share[idx[k]] = f;
+            });
+          }
+          const top = Array(cols).fill(0);
+          return weights.map((w, i) => {
+            const c = colOf[i],
+              f = share[i],
+              at = top[c];
+            top[c] += f;
+            return rows
+              ? [at, c / cols, f, 1 / cols]
+              : [c / cols, at, 1 / cols, f];
+          });
+        }
+
+        function masonry(m, animate = true) {
+          const autoCols =
+            panels.length <= 2
+              ? panels.length
+              : Math.max(
+                  2,
+                  Math.min(
+                    Math.ceil(panels.length / 2),
+                    Math.round(ws.clientWidth / 420),
+                  ),
+                );
+          const cols = m.cols || autoCols;
+          const n = Math.max(panels.length, cols); // fixed-column variants get an empty panel per missing column
+          if (!n) return;
+          const sizes = panels.map((p) => (m.rows ? p.w : p.h));
+          const avg = sizes.reduce((a, b) => a + b, 0) / (sizes.length || 1);
+          const even =
+            !sizes.length || Math.max(...sizes) / Math.min(...sizes) < 1.15;
+          const weights = Array.from({ length: n }, (_, i) =>
+            even || i >= sizes.length
+              ? STAGGER[i % STAGGER.length]
+              : sizes[i] / avg,
+          );
+          const min = m.rows
+            ? (MIN_W + GAP) / (ws.clientWidth - GAP)
+            : (MIN_H + GAP) / (ws.clientHeight - GAP);
+          applyLayout(masonryCells(weights, cols, m.rows, min), m.id, animate);
+        }
+
+        function tile(animate = true) {
+          const n = panels.length;
+          if (!n) return;
+          const cols = n <= 3 ? n : n <= 6 ? 3 : Math.ceil(Math.sqrt(n));
+          const rows = Math.ceil(n / cols);
+          applyLayout(gridCells(cols, rows).slice(0, n), "auto", animate);
+        }
+
+        const elOf = (id) => ws.querySelector(`[data-id="${id}"]`);
+
+        function apply(p) {
+          const el = elOf(p.id);
+          if (!el) return;
+          if (p.max) {
+            p.x = 0;
+            p.y = 0;
+            p.w = ws.clientWidth;
+            p.h = ws.clientHeight;
+          }
+          el.style.left = p.x + "px";
+          el.style.top = p.y + "px";
+          el.style.width = p.w + "px";
+          el.style.height = p.h + "px";
+          el.style.zIndex = p.z;
+          el.classList.toggle("max", !!p.max);
+        }
+
+        function raise(p) {
+          p.z = ++zTop;
+          ws.querySelectorAll(".panel").forEach((e) =>
+            e.classList.toggle("active", e.dataset.id === p.id),
+          );
+          elOf(p.id).style.zIndex = p.z;
+        }
+
+        /* ---------- panel DOM ---------- */
+        function build(p) {
+          const el = document.createElement("section");
+          el.className = "panel";
+          el.dataset.id = p.id;
+          el.innerHTML = `
       <div class="tb">
-        <span class="grip" aria-hidden="true">⋮⋮</span>
+        <span class="grip" aria-hidden="true" title="Drag to move. Drop on another panel to swap them; hold Shift to place freely.">⋮⋮</span>
         <span class="ttl"></span>
         <div class="acts">
           <button class="ib" data-a="reload" title="Reload" aria-label="Reload">${icon("reload")}</button>
@@ -315,302 +1226,769 @@
         </div>
       </div>
       <div class="body"></div>
-      ${["n","s","e","w","ne","nw","se","sw"].map(d => `<i class="h" data-d="${d}"></i>`).join("")}`;
-    ws.appendChild(el);
-    fill(p);
-    apply(p);
+      ${["n", "s", "e", "w", "ne", "nw", "se", "sw"].map((d) => `<i class="h" data-d="${d}"></i>`).join("")}`;
+          ws.appendChild(el);
+          fill(p);
+          apply(p);
 
-    const tb = el.querySelector(".tb");
-    tb.addEventListener("pointerdown", e => startDrag(e, p, tb));
-    tb.addEventListener("dblclick", e => { if (!e.target.closest("button")) toggleMax(p); });
-    el.addEventListener("pointerdown", () => raise(p), true);
-    el.querySelectorAll(".h").forEach(h => h.addEventListener("pointerdown", e => startResize(e, p, h)));
-    el.querySelector(".acts").addEventListener("click", e => {
-      const b = e.target.closest("button"); if (!b) return;
-      ({ reload: () => reload(p), open: () => p.url && window.open(p.url, "_blank", "noopener"),
-         edit: () => openDialog(p), max: () => toggleMax(p), close: () => remove(p) })[b.dataset.a]();
-    });
-    return el;
-  }
-
-  function fill(p) {
-    const el = elOf(p.id);
-    el.querySelector(".ttl").textContent = p.title || hostOf(p.url) || "New panel";
-    const body = el.querySelector(".body");
-    body.innerHTML = "";
-    if (!p.url) {
-      const slot = document.createElement("div");
-      slot.className = "slot";
-      slot.innerHTML = `<p>Paste a link to show it here.</p>
-        <div class="row"><input type="text" placeholder="https://…" aria-label="Website address"><button class="btn">Embed</button></div>`;
-      const input = slot.querySelector("input");
-      const go = () => {
-        const u = normalizeUrl(input.value);
-        if (!u) { input.focus(); return; }
-        p.url = u; if (!p.title || p.title === "Your site") p.title = hostOf(u);
-        fill(p); save();
-      };
-      slot.querySelector("button").onclick = go;
-      input.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
-      body.appendChild(slot);
-      return;
-    }
-    const loading = document.createElement("div");
-    loading.className = "loading"; loading.textContent = "Loading " + hostOf(p.url) + "…";
-    const f = document.createElement("iframe");
-    f.src = p.url;
-    f.title = p.title || hostOf(p.url);
-    f.setAttribute("allow", "autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture; storage-access");
-    f.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-    body.append(loading, f);
-  }
-
-  function reload(p) {
-    const f = elOf(p.id).querySelector("iframe");
-    if (f) f.src = p.url;
-  }
-
-  function toggleMax(p) {
-    if (p.max) {
-      Object.assign(p, p.prev || {}); p.max = false;
-    } else {
-      p.prev = { x: p.x, y: p.y, w: p.w, h: p.h }; p.max = true;
-    }
-    const el = elOf(p.id);
-    el.classList.add("anim"); setTimeout(() => el.classList.remove("anim"), 300);
-    raise(p); apply(p); save();
-  }
-
-  function remove(p) {
-    const el = elOf(p.id);
-    lastRemoved = { p: { ...p }, index: panels.indexOf(p) };
-    panels = panels.filter(x => x !== p);
-    el.remove();
-    syncEmpty(); save();
-    toast(`Removed “${p.title || hostOf(p.url) || "panel"}”`, () => {
-      const r = lastRemoved; if (!r) return;
-      panels.splice(r.index, 0, r.p); build(r.p); raise(r.p); syncEmpty(); save();
-    });
-  }
-
-  function syncEmpty() { ws.classList.toggle("empty", panels.length === 0); }
-
-  /* ---------- drag ---------- */
-  function startDrag(e, p, handle) {
-    if (locked || p.max || e.button > 0 || e.target.closest("button")) return;
-    e.preventDefault();
-    const sx = e.clientX, sy = e.clientY, ox = p.x, oy = p.y;
-    ws.classList.add("busy");
-    handle.setPointerCapture(e.pointerId);
-    const move = ev => {
-      const W = ws.clientWidth, H = ws.clientHeight;
-      p.x = snapv(Math.min(Math.max(ox + ev.clientX - sx, 80 - p.w), W - 80));
-      p.y = snapv(Math.min(Math.max(oy + ev.clientY - sy, 0), H - 34));
-      apply(p);
-    };
-    const up = () => {
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", up);
-      handle.removeEventListener("pointercancel", up);
-      ws.classList.remove("busy"); save();
-    };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", up);
-    handle.addEventListener("pointercancel", up);
-  }
-
-  /* ---------- resize ---------- */
-  function startResize(e, p, handle) {
-    if (locked || p.max || e.button > 0) return;
-    e.preventDefault(); e.stopPropagation();
-    raise(p);
-    const d = handle.dataset.d;
-    const sx = e.clientX, sy = e.clientY, o = { x: p.x, y: p.y, w: p.w, h: p.h };
-    ws.classList.add("busy");
-    handle.setPointerCapture(e.pointerId);
-    const move = ev => {
-      const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      let { x, y, w, h } = o;
-      if (d.includes("e")) w = Math.max(MIN_W, o.w + dx);
-      if (d.includes("s")) h = Math.max(MIN_H, o.h + dy);
-      if (d.includes("w")) { w = Math.max(MIN_W, o.w - dx); x = o.x + o.w - w; }
-      if (d.includes("n")) { h = Math.max(MIN_H, o.h - dy); y = o.y + o.h - h; }
-      if (snapEl.checked) {
-        if (d.includes("w")) { x = snapv(x); w = o.x + o.w - x; } else { w = snapv(w); }
-        if (d.includes("n")) { y = snapv(y); h = o.y + o.h - y; } else { h = snapv(h); }
-        w = Math.max(MIN_W, w); h = Math.max(MIN_H, h);
-      }
-      Object.assign(p, { x, y: Math.max(0, y), w, h });
-      apply(p);
-    };
-    const up = () => {
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", up);
-      handle.removeEventListener("pointercancel", up);
-      ws.classList.remove("busy"); save();
-    };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", up);
-    handle.addEventListener("pointercancel", up);
-  }
-
-  /* ---------- dialog ---------- */
-  const dlg = $("dlg"), fTitle = $("fTitle"), fUrl = $("fUrl");
-  let editing = null;
-
-  $("chips").innerHTML = PRESETS.map((s, i) => `<button type="button" class="chip" data-i="${i}">${s.title}</button>`).join("");
-  $("chips").addEventListener("click", e => {
-    const c = e.target.closest(".chip"); if (!c) return;
-    const s = PRESETS[+c.dataset.i]; fTitle.value = s.title; fUrl.value = s.url;
-  });
-
-  function openDialog(p) {
-    editing = p || null;
-    $("dlgTitle").textContent = p ? "Edit panel" : "Add site";
-    $("save").textContent = p ? "Save changes" : "Add panel";
-    fTitle.value = p ? p.title : "";
-    fUrl.value = p ? p.url : "";
-    dlg.showModal();
-    fUrl.focus();
-  }
-  $("cancel").onclick = () => dlg.close();
-  $("form").addEventListener("submit", e => {
-    const url = normalizeUrl(fUrl.value);
-    if (url === null || url === "") { e.preventDefault(); fUrl.setCustomValidity("Enter a valid address"); fUrl.reportValidity(); return; }
-    fUrl.setCustomValidity("");
-    const title = fTitle.value.trim() || hostOf(url);
-    if (editing) {
-      const changed = editing.url !== url;
-      editing.title = title; editing.url = url;
-      fill(editing);
-      if (!changed) elOf(editing.id).querySelector(".ttl").textContent = title;
-    } else {
-      const W = ws.clientWidth, H = ws.clientHeight;
-      const w = Math.min(520, W - 40), h = Math.min(420, H - 40);
-      const off = (panels.length % 6) * 30;
-      const p = { id: newId(), title, url, x: snapv(40 + off), y: snapv(30 + off), w: snapv(w), h: snapv(h), z: ++zTop };
-      panels.push(p); build(p); raise(p); syncEmpty();
-    }
-    save();
-  });
-  fUrl.addEventListener("input", () => fUrl.setCustomValidity(""));
-
-  /* ---------- toast ---------- */
-  let toastTimer;
-  function toast(msg, undo) {
-    $("toastMsg").textContent = msg;
-    const u = $("toastUndo"); u.style.display = undo ? "" : "none";
-    u.onclick = () => { undo && undo(); hideToast(); };
-    $("toast").style.display = "flex";
-    clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 6000);
-  }
-  function hideToast() { $("toast").style.display = "none"; }
-
-  /* ---------- toolbar ---------- */
-  $("add").onclick = () => openDialog(null);
-  $("tile").onclick = () => tile(true);
-  snapEl.onchange = save;
-  gridEl.onchange = () => { ws.classList.toggle("grid", gridEl.checked); save(); };
-  function setLocked(v) {
-    locked = v;
-    lockBtn.setAttribute("aria-pressed", String(v));
-    lockBtn.textContent = v ? "Unlock layout" : "Lock layout";
-    ws.classList.toggle("locked", v);
-    save();
-  }
-  lockBtn.onclick = () => setLocked(!locked);
-
-  function setZen(v) {
-    zen = v;
-    document.body.classList.toggle("zen", v);
-    save();
-  }
-  $("zen").onclick = () => setZen(!zen);
-  window.addEventListener("keydown", e => { if (e.key === "Escape" && zen) setZen(false); });
-
-  $("export").onclick = () => {
-    const blob = new Blob([JSON.stringify({ panels }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = "deskboard-layout.json";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-  $("import").onclick = () => $("file").click();
-  $("file").onchange = async e => {
-    const f = e.target.files[0]; e.target.value = "";
-    if (!f) return;
-    try {
-      const data = JSON.parse(await f.text());
-      if (!Array.isArray(data.panels)) throw new Error();
-      load(data.panels.map(clean));
-      save(); toast("Layout imported");
-    } catch { toast("That file isn’t a Deskboard layout."); }
-  };
-  $("reset").onclick = () => {
-    if (!confirm("Reset to the default six panels? Your current layout will be replaced.")) return;
-    load(DEFAULT_SITES.map(s => clean({ ...s })));
-    tile(false); save();
-  };
-
-  function clean(p) {
-    return {
-      id: p.id || newId(), title: String(p.title || ""), url: p.url ? (normalizeUrl(p.url) || "") : "",
-      x: +p.x || 0, y: +p.y || 0, w: Math.max(MIN_W, +p.w || 400), h: Math.max(MIN_H, +p.h || 300),
-      z: +p.z || 1, max: false,
-    };
-  }
-
-  function load(list) {
-    ws.querySelectorAll(".panel").forEach(e => e.remove());
-    panels = list;
-    zTop = Math.max(1, ...panels.map(p => p.z));
-    panels.forEach(build);
-    syncEmpty();
-  }
-
-  // Any workspace resize (window resize, or the bar hiding/showing in zen mode)
-  // should rescale panels to fill the new space instead of leaving them stranded.
-  let wsW = ws.clientWidth, wsH = ws.clientHeight;
-  new ResizeObserver(() => {
-    const w = ws.clientWidth, h = ws.clientHeight;
-    const rx = wsW ? w / wsW : 1, ry = wsH ? h / wsH : 1;
-    if (rx !== 1 || ry !== 1) {
-      panels.forEach(p => {
-        if (!p.max) {
-          p.x = Math.round(p.x * rx); p.y = Math.round(p.y * ry);
-          p.w = Math.max(MIN_W, Math.round(p.w * rx)); p.h = Math.max(MIN_H, Math.round(p.h * ry));
+          const tb = el.querySelector(".tb");
+          tb.addEventListener("pointerdown", (e) => startDrag(e, p, tb));
+          tb.addEventListener("dblclick", (e) => {
+            if (!e.target.closest("button")) toggleMax(p);
+          });
+          el.addEventListener("pointerdown", () => raise(p), true);
+          el.querySelectorAll(".h").forEach((h) =>
+            h.addEventListener("pointerdown", (e) => startResize(e, p, h)),
+          );
+          el.querySelector(".acts").addEventListener("click", (e) => {
+            const b = e.target.closest("button");
+            if (!b) return;
+            ({
+              reload: () => reload(p),
+              open: () => p.url && window.open(p.url, "_blank", "noopener"),
+              edit: () => openDialog(p),
+              max: () => toggleMax(p),
+              close: () => remove(p),
+            })[b.dataset.a]();
+          });
+          return el;
         }
-        apply(p);
-      });
-      save();
-    }
-    wsW = w; wsH = h;
-  }).observe(ws);
 
-  // Clicking inside an iframe doesn't bubble to the page, but it does blur the window.
-  window.addEventListener("blur", () => setTimeout(() => {
-    const a = document.activeElement;
-    if (a && a.tagName === "IFRAME") {
-      const id = a.closest(".panel")?.dataset.id;
-      const p = panels.find(x => x.id === id); if (p) raise(p);
-    }
-  }, 0));
+        function fill(p) {
+          const el = elOf(p.id);
+          el.querySelector(".ttl").textContent =
+            p.title || hostOf(p.url) || "New panel";
+          const body = el.querySelector(".body");
+          body.innerHTML = "";
+          if (!p.url) {
+            const slot = document.createElement("div");
+            slot.className = "slot";
+            slot.innerHTML = `<p>Paste a link to show it here.</p>
+        <div class="row"><input type="text" placeholder="https://…" aria-label="Website address"><button class="btn">Embed</button></div>`;
+            const input = slot.querySelector("input");
+            const go = () => {
+              const u = normalizeUrl(input.value);
+              if (!u) {
+                input.focus();
+                return;
+              }
+              p.url = u;
+              if (!p.title || p.title === "Your site") p.title = hostOf(u);
+              fill(p);
+              save();
+            };
+            slot.querySelector("button").onclick = go;
+            input.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") go();
+            });
+            body.appendChild(slot);
+            return;
+          }
+          const loading = document.createElement("div");
+          loading.className = "loading";
+          loading.textContent = "Loading " + hostOf(p.url) + "…";
+          const f = document.createElement("iframe");
+          f.src = p.url;
+          f.title = p.title || hostOf(p.url);
+          f.setAttribute(
+            "allow",
+            "autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture; storage-access",
+          );
+          f.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+          body.append(loading, f);
+        }
 
-  /* ---------- boot ---------- */
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(STORE)); } catch {}
-  if (saved && Array.isArray(saved.panels)) {
-    snapEl.checked = saved.snap !== false;
-    gridEl.checked = saved.grid !== false;
-    load(saved.panels.map(clean));
-    setLocked(!!saved.locked);
-    setZen(!!saved.zen);
-  } else {
-    load(DEFAULT_SITES.map(s => clean({ ...s })));
-    tile(false);
-  }
-  ws.classList.toggle("grid", gridEl.checked);
-})();
-</script>
-</body>
+        function reload(p) {
+          const f = elOf(p.id).querySelector("iframe");
+          if (f) f.src = p.url;
+        }
+
+        function toggleMax(p) {
+          if (p.max) {
+            Object.assign(p, p.prev || {});
+            p.max = false;
+          } else {
+            p.prev = { x: p.x, y: p.y, w: p.w, h: p.h };
+            p.max = true;
+          }
+          const el = elOf(p.id);
+          animateEl(el);
+          raise(p);
+          apply(p);
+          save();
+        }
+
+        function remove(p) {
+          const el = elOf(p.id);
+          lastRemoved = { p: { ...p }, index: panels.indexOf(p) };
+          panels = panels.filter((x) => x !== p);
+          el.remove();
+          syncEmpty();
+          save();
+          toast(`Removed “${p.title || hostOf(p.url) || "panel"}”`, () => {
+            const r = lastRemoved;
+            if (!r) return;
+            panels.splice(r.index, 0, r.p);
+            build(r.p);
+            raise(r.p);
+            syncEmpty();
+            save();
+          });
+        }
+
+        function syncEmpty() {
+          ws.classList.toggle("empty", panels.length === 0);
+        }
+
+        /* ---------- drag ---------- */
+        // True when a panel sits in a slot (allowing for rounding after window resizes).
+        const sameRect = (a, b) =>
+          Math.abs(a.x - b.x) <= 6 &&
+          Math.abs(a.y - b.y) <= 6 &&
+          Math.abs(a.w - b.w) <= 6 &&
+          Math.abs(a.h - b.h) <= 6;
+
+        // Topmost panel under a workspace point, ignoring `skip` and maximized panels.
+        const panelAt = (x, y, skip) =>
+          panels
+            .filter(
+              (q) =>
+                q !== skip &&
+                !q.max &&
+                x >= q.x &&
+                x <= q.x + q.w &&
+                y >= q.y &&
+                y <= q.y + q.h,
+            )
+            .sort((a, b) => b.z - a.z)[0] || null;
+
+        function swap(p, t, from) {
+          const to = { x: t.x, y: t.y, w: t.w, h: t.h };
+          Object.assign(t, from);
+          Object.assign(p, to);
+          const i = panels.indexOf(p),
+            j = panels.indexOf(t);
+          [panels[i], panels[j]] = [panels[j], panels[i]]; // so re-applying a layout keeps the new order
+          [p, t].forEach((q) => {
+            animateEl(elOf(q.id));
+            apply(q);
+          });
+        }
+
+        function startDrag(e, p, handle) {
+          if (locked || p.max || e.button > 0 || e.target.closest("button"))
+            return;
+          e.preventDefault();
+          const sx = e.clientX,
+            sy = e.clientY,
+            ox = p.x,
+            oy = p.y,
+            from = { x: p.x, y: p.y, w: p.w, h: p.h };
+          const wsBox = ws.getBoundingClientRect(),
+            el = elOf(p.id);
+          let target = null,
+            slot = null;
+          const setTarget = (t) => {
+            if (t === target) return;
+            if (target) elOf(target.id).classList.remove("swap-target");
+            target = t;
+            if (t) elOf(t.id).classList.add("swap-target");
+          };
+          // With layout slots, show them all above the other panels while dragging.
+          const slots = zones.map(cellRect),
+            slotEls = [...zonesEl.children];
+          const occupant = (r) =>
+            panels.find((q) => q !== p && !q.max && sameRect(q, r)) || null;
+          const setSlot = (i) => {
+            if (i === slot) return;
+            if (slot !== null) slotEls[slot].classList.remove("hot");
+            slot = i;
+            if (i !== null) {
+              slotEls[i].classList.add("hot");
+              slotEls[i].dataset.label = occupant(slots[i])
+                ? "Swap"
+                : "Drop here";
+            }
+          };
+          if (slots.length) {
+            zonesEl.classList.add("active");
+            zonesEl.style.zIndex = zTop + 1;
+            el.style.zIndex = zTop + 2;
+          }
+          ws.classList.add("busy");
+          handle.setPointerCapture(e.pointerId);
+          const move = (ev) => {
+            const W = ws.clientWidth,
+              H = ws.clientHeight;
+            p.x = snapv(
+              Math.min(Math.max(ox + ev.clientX - sx, 80 - p.w), W - 80),
+            );
+            p.y = snapv(Math.min(Math.max(oy + ev.clientY - sy, 0), H - 34));
+            apply(p);
+            if (slots.length) el.style.zIndex = zTop + 2;
+            const px = ev.clientX - wsBox.left,
+              py = ev.clientY - wsBox.top;
+            const i = ev.shiftKey
+              ? -1
+              : slots.findIndex(
+                  (r) =>
+                    px >= r.x &&
+                    px <= r.x + r.w &&
+                    py >= r.y &&
+                    py <= r.y + r.h,
+                );
+            setSlot(i < 0 ? null : i);
+            setTarget(i >= 0 || ev.shiftKey ? null : panelAt(px, py, p));
+            el.classList.toggle("swapping", slot !== null || !!target);
+          };
+          const up = (ev) => {
+            handle.removeEventListener("pointermove", move);
+            handle.removeEventListener("pointerup", up);
+            handle.removeEventListener("pointercancel", up);
+            const drop = ev.type === "pointerup";
+            const t = drop ? target : null,
+              s = drop ? slot : null;
+            setTarget(null);
+            setSlot(null);
+            el.classList.remove("swapping");
+            zonesEl.classList.remove("active");
+            zonesEl.style.zIndex = "";
+            if (s !== null) {
+              const occ = occupant(slots[s]);
+              if (occ) swap(p, occ, from);
+              else {
+                Object.assign(p, slots[s]);
+                animateEl(el);
+              }
+            } else if (t) swap(p, t, from);
+            apply(p);
+            ws.classList.remove("busy");
+            save();
+          };
+          handle.addEventListener("pointermove", move);
+          handle.addEventListener("pointerup", up);
+          handle.addEventListener("pointercancel", up);
+        }
+
+        /* ---------- resize ---------- */
+        // In a masonry layout, edges are shared dividers: resizing a panel moves the whole
+        // column (or row) boundary, or trades space with the panel next to it in its column.
+        function masonryResize(e, p, handle) {
+          if (!layout.startsWith("masonry") || !zones.length) return false;
+          const pi = zones.findIndex((c) => sameRect(p, cellRect(c)));
+          if (pi < 0) return false;
+          const rows = layout.startsWith("masonry-r");
+          const occ = zones.map((c) => {
+            const r = cellRect(c);
+            return panels.find((q) => !q.max && sameRect(q, r)) || null;
+          });
+
+          // Work in major (across columns) / minor (down a column) terms so rows reuse the same code.
+          const toMM = (c) =>
+            rows
+              ? { a: c[1], as: c[3], b: c[0], bs: c[2] }
+              : { a: c[0], as: c[2], b: c[1], bs: c[3] };
+          const fromMM = (m) =>
+            rows ? [m.b, m.a, m.bs, m.as] : [m.a, m.b, m.as, m.bs];
+          const base = zones.map(toMM);
+          const starts = [...new Set(base.map((m) => m.a.toFixed(4)))]
+            .map(Number)
+            .sort((a, b) => a - b);
+          const groups = starts.map((st) =>
+            base
+              .map((_, i) => i)
+              .filter((i) => Math.abs(base[i].a - st) < 1e-4)
+              .sort((i, j) => base[i].b - base[j].b),
+          );
+          const g = groups.findIndex((gr) => gr.includes(pi)),
+            pos = groups[g].indexOf(pi);
+
+          const d = handle.dataset.d;
+          const W = ws.clientWidth - GAP,
+            H = ws.clientHeight - GAP;
+          const majFar = d.includes(rows ? "s" : "e"),
+            majNear = d.includes(rows ? "n" : "w");
+          const minFar = d.includes(rows ? "e" : "s"),
+            minNear = d.includes(rows ? "w" : "n");
+          const minMaj = ((rows ? MIN_H : MIN_W) + GAP) / (rows ? H : W);
+          const minMin = ((rows ? MIN_W : MIN_H) + GAP) / (rows ? W : H);
+
+          e.preventDefault();
+          e.stopPropagation();
+          raise(p);
+          const sx = e.clientX,
+            sy = e.clientY;
+          ws.classList.add("busy");
+          handle.setPointerCapture(e.pointerId);
+          const move = (ev) => {
+            const dMaj = rows ? (ev.clientY - sy) / H : (ev.clientX - sx) / W;
+            const dMin = rows ? (ev.clientX - sx) / W : (ev.clientY - sy) / H;
+            const m = base.map((o) => ({ ...o }));
+            // Move the boundary between column k and k+1.
+            const moveMajor = (k) => {
+              if (k < 0 || k + 1 >= groups.length) return;
+              const L = base[groups[k][0]],
+                R = base[groups[k + 1][0]];
+              const edge = Math.min(
+                Math.max(R.a + R.as - minMaj, R.a),
+                Math.max(Math.min(L.a + minMaj, R.a), R.a + dMaj),
+              );
+              groups[k].forEach((i) => {
+                m[i].as = edge - base[i].a;
+              });
+              groups[k + 1].forEach((i) => {
+                m[i].as = base[i].a + base[i].as - edge;
+                m[i].a = edge;
+              });
+            };
+            // Move the boundary between items k and k+1 of this column.
+            const moveMinor = (k) => {
+              const gr = groups[g];
+              if (k < 0 || k + 1 >= gr.length) return;
+              const T = base[gr[k]],
+                B = base[gr[k + 1]];
+              const edge = Math.min(
+                Math.max(B.b + B.bs - minMin, B.b),
+                Math.max(Math.min(T.b + minMin, B.b), B.b + dMin),
+              );
+              m[gr[k]].bs = edge - T.b;
+              m[gr[k + 1]].bs = B.b + B.bs - edge;
+              m[gr[k + 1]].b = edge;
+            };
+            if (majFar) moveMajor(g);
+            else if (majNear) moveMajor(g - 1);
+            if (minFar) moveMinor(pos);
+            else if (minNear) moveMinor(pos - 1);
+            zones = m.map(fromMM);
+            zones.forEach((c, i) => {
+              if (occ[i]) {
+                Object.assign(occ[i], cellRect(c));
+                apply(occ[i]);
+              }
+            });
+          };
+          const up = () => {
+            handle.removeEventListener("pointermove", move);
+            handle.removeEventListener("pointerup", up);
+            handle.removeEventListener("pointercancel", up);
+            ws.classList.remove("busy");
+            renderZones();
+            save();
+          };
+          handle.addEventListener("pointermove", move);
+          handle.addEventListener("pointerup", up);
+          handle.addEventListener("pointercancel", up);
+          return true;
+        }
+
+        function startResize(e, p, handle) {
+          if (locked || p.max || e.button > 0) return;
+          if (masonryResize(e, p, handle)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          raise(p);
+          const d = handle.dataset.d;
+          const sx = e.clientX,
+            sy = e.clientY,
+            o = { x: p.x, y: p.y, w: p.w, h: p.h };
+          ws.classList.add("busy");
+          handle.setPointerCapture(e.pointerId);
+          const move = (ev) => {
+            const dx = ev.clientX - sx,
+              dy = ev.clientY - sy;
+            let { x, y, w, h } = o;
+            if (d.includes("e")) w = Math.max(MIN_W, o.w + dx);
+            if (d.includes("s")) h = Math.max(MIN_H, o.h + dy);
+            if (d.includes("w")) {
+              w = Math.max(MIN_W, o.w - dx);
+              x = o.x + o.w - w;
+            }
+            if (d.includes("n")) {
+              h = Math.max(MIN_H, o.h - dy);
+              y = o.y + o.h - h;
+            }
+            if (snapEl.checked) {
+              if (d.includes("w")) {
+                x = snapv(x);
+                w = o.x + o.w - x;
+              } else {
+                w = snapv(w);
+              }
+              if (d.includes("n")) {
+                y = snapv(y);
+                h = o.y + o.h - y;
+              } else {
+                h = snapv(h);
+              }
+              w = Math.max(MIN_W, w);
+              h = Math.max(MIN_H, h);
+            }
+            Object.assign(p, { x, y: Math.max(0, y), w, h });
+            apply(p);
+          };
+          const up = () => {
+            handle.removeEventListener("pointermove", move);
+            handle.removeEventListener("pointerup", up);
+            handle.removeEventListener("pointercancel", up);
+            ws.classList.remove("busy");
+            save();
+          };
+          handle.addEventListener("pointermove", move);
+          handle.addEventListener("pointerup", up);
+          handle.addEventListener("pointercancel", up);
+        }
+
+        /* ---------- dialog ---------- */
+        const dlg = $("dlg"),
+          fTitle = $("fTitle"),
+          fUrl = $("fUrl");
+        let editing = null;
+
+        $("chips").innerHTML = PRESETS.map(
+          (s, i) =>
+            `<button type="button" class="chip" data-i="${i}">${s.title}</button>`,
+        ).join("");
+        $("chips").addEventListener("click", (e) => {
+          const c = e.target.closest(".chip");
+          if (!c) return;
+          const s = PRESETS[+c.dataset.i];
+          fTitle.value = s.title;
+          fUrl.value = s.url;
+        });
+
+        function openDialog(p) {
+          editing = p || null;
+          $("dlgTitle").textContent = p ? "Edit panel" : "Add site";
+          $("save").textContent = p ? "Save changes" : "Add panel";
+          fTitle.value = p ? p.title : "";
+          fUrl.value = p ? p.url : "";
+          dlg.showModal();
+          fUrl.focus();
+        }
+        $("cancel").onclick = () => dlg.close();
+        $("form").addEventListener("submit", (e) => {
+          const url = normalizeUrl(fUrl.value);
+          if (url === null || url === "") {
+            e.preventDefault();
+            fUrl.setCustomValidity("Enter a valid address");
+            fUrl.reportValidity();
+            return;
+          }
+          fUrl.setCustomValidity("");
+          const title = fTitle.value.trim() || hostOf(url);
+          if (editing) {
+            const changed = editing.url !== url;
+            editing.title = title;
+            editing.url = url;
+            fill(editing);
+            if (!changed)
+              elOf(editing.id).querySelector(".ttl").textContent = title;
+          } else {
+            const W = ws.clientWidth,
+              H = ws.clientHeight;
+            const w = Math.min(520, W - 40),
+              h = Math.min(420, H - 40);
+            const off = (panels.length % 6) * 30;
+            const p = {
+              id: newId(),
+              title,
+              url,
+              x: snapv(40 + off),
+              y: snapv(30 + off),
+              w: snapv(w),
+              h: snapv(h),
+              z: ++zTop,
+            };
+            panels.push(p);
+            build(p);
+            raise(p);
+            syncEmpty();
+          }
+          save();
+        });
+        fUrl.addEventListener("input", () => fUrl.setCustomValidity(""));
+
+        /* ---------- toast ---------- */
+        let toastTimer;
+        function toast(msg, undo) {
+          $("toastMsg").textContent = msg;
+          const u = $("toastUndo");
+          u.style.display = undo ? "" : "none";
+          u.onclick = () => {
+            undo && undo();
+            hideToast();
+          };
+          $("toast").style.display = "flex";
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(hideToast, 6000);
+        }
+        function hideToast() {
+          $("toast").style.display = "none";
+        }
+
+        /* ---------- toolbar ---------- */
+        $("add").onclick = () => openDialog(null);
+
+        // layout menu
+        const menu = $("layoutMenu"),
+          layoutBtn = $("layoutBtn"),
+          cCols = $("cCols"),
+          cRows = $("cRows");
+        const thumb = (cells) =>
+          `<svg viewBox="0 0 60 40" aria-hidden="true">${cells
+            .map(
+              ([x, y, w, h]) =>
+                `<rect x="${x * 60 + 1.5}" y="${y * 40 + 1.5}" width="${w * 60 - 3}" height="${h * 40 - 3}" rx="2"/>`,
+            )
+            .join("")}</svg>`;
+        $("layGrid").innerHTML = LAYOUTS.map(
+          (l) =>
+            `<button class="lay" role="menuitemradio" aria-checked="false" data-l="${l.id}">${thumb(l.cells)}${l.name}</button>`,
+        ).join("");
+        $("masonryGrid").innerHTML = MASONRY.map((m) => {
+          const cols = m.cols || 3,
+            n = cols * (m.rows ? 2 : 3) - 1;
+          const cells = masonryCells(
+            Array.from({ length: n }, (_, i) => STAGGER[i % STAGGER.length]),
+            cols,
+            m.rows,
+          );
+          return `<button class="lay" role="menuitemradio" aria-checked="false" data-l="${m.id}">${thumb(cells)}${m.name}</button>`;
+        }).join("");
+
+        // Slot outlines can be hidden for regular layouts; masonry always shows them.
+        // They still appear while dragging either way, so dropping into slots keeps working.
+        function syncSlots() {
+          const masonryOn = layout.startsWith("masonry");
+          zonesEl.classList.toggle("hide-idle", !slotsEl.checked && !masonryOn);
+          slotsEl.disabled = masonryOn;
+          $("slotsLbl").classList.toggle("off", masonryOn);
+          $("slotsLbl").title = masonryOn
+            ? "Slots are always shown for masonry layouts"
+            : "Show the current layout's slots on the desk";
+        }
+
+        function markLayout() {
+          syncSlots();
+          menu
+            .querySelectorAll("[data-l]")
+            .forEach((b) =>
+              b.setAttribute("aria-checked", String(b.dataset.l === layout)),
+            );
+          menu
+            .querySelectorAll("[data-mode]")
+            .forEach((b) =>
+              b.setAttribute(
+                "aria-checked",
+                String(b.dataset.mode === placeMode),
+              ),
+            );
+          const m = /^custom-(\d+)x(\d+)$/.exec(layout);
+          if (m) {
+            cCols.value = m[1];
+            cRows.value = m[2];
+          }
+        }
+        function setMenu(open) {
+          menu.classList.toggle("open", open);
+          layoutBtn.setAttribute("aria-expanded", String(open));
+        }
+        layoutBtn.onclick = () => setMenu(!menu.classList.contains("open"));
+        menu.addEventListener("click", (e) => {
+          const mb = e.target.closest("[data-mode]");
+          if (mb) {
+            placeMode = mb.dataset.mode;
+            markLayout();
+            save();
+            return;
+          }
+          const b = e.target.closest("[data-l]");
+          if (!b) return;
+          const l = LAYOUTS.find((x) => x.id === b.dataset.l),
+            m = MASONRY.find((x) => x.id === b.dataset.l);
+          if (l) applyLayout(l.cells, l.id);
+          else if (m) masonry(m);
+          else tile(true);
+          setMenu(false);
+        });
+        $("cApply").onclick = () => {
+          const c = Math.min(6, Math.max(1, Math.round(+cCols.value) || 1));
+          const r = Math.min(4, Math.max(1, Math.round(+cRows.value) || 1));
+          applyLayout(gridCells(c, r), `custom-${c}x${r}`);
+          setMenu(false);
+        };
+        menu.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && e.target.matches("input"))
+            $("cApply").click();
+        });
+        document.addEventListener("pointerdown", (e) => {
+          if (!e.target.closest(".menu-wrap")) setMenu(false);
+        });
+        window.addEventListener("blur", () => setMenu(false));
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && menu.classList.contains("open")) {
+            setMenu(false);
+            layoutBtn.focus();
+          }
+        });
+        snapEl.onchange = save;
+        gridEl.onchange = () => {
+          ws.classList.toggle("grid", gridEl.checked);
+          save();
+        };
+        slotsEl.onchange = () => {
+          syncSlots();
+          save();
+        };
+        function setLocked(v) {
+          locked = v;
+          lockBtn.setAttribute("aria-pressed", String(v));
+          lockBtn.textContent = v ? "Unlock layout" : "Lock layout";
+          ws.classList.toggle("locked", v);
+          save();
+        }
+        lockBtn.onclick = () => setLocked(!locked);
+
+        function setZen(v) {
+          zen = v;
+          document.body.classList.toggle("zen", v);
+          save();
+        }
+        $("zen").onclick = () => setZen(!zen);
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && zen) setZen(false);
+        });
+
+        $("export").onclick = () => {
+          const blob = new Blob([JSON.stringify({ panels }, null, 2)], {
+            type: "application/json",
+          });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "deskboard-layout.json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        };
+        $("import").onclick = () => $("file").click();
+        $("file").onchange = async (e) => {
+          const f = e.target.files[0];
+          e.target.value = "";
+          if (!f) return;
+          try {
+            const data = JSON.parse(await f.text());
+            if (!Array.isArray(data.panels)) throw new Error();
+            load(data.panels.map(clean));
+            zones = [];
+            layout = "";
+            renderZones();
+            markLayout();
+            save();
+            toast("Layout imported");
+          } catch {
+            toast("That file isn’t a Deskboard layout.");
+          }
+        };
+        $("reset").onclick = () => {
+          if (
+            !confirm(
+              "Reset to the default six panels? Your current layout will be replaced.",
+            )
+          )
+            return;
+          load(DEFAULT_SITES.map((s) => clean({ ...s })));
+          tile(false);
+          save();
+        };
+
+        function clean(p) {
+          return {
+            id: p.id || newId(),
+            title: String(p.title || ""),
+            url: p.url ? normalizeUrl(p.url) || "" : "",
+            x: +p.x || 0,
+            y: +p.y || 0,
+            w: Math.max(MIN_W, +p.w || 400),
+            h: Math.max(MIN_H, +p.h || 300),
+            z: +p.z || 1,
+            max: false,
+          };
+        }
+
+        function load(list) {
+          ws.querySelectorAll(".panel").forEach((e) => e.remove());
+          panels = list;
+          zTop = Math.max(1, ...panels.map((p) => p.z));
+          panels.forEach(build);
+          syncEmpty();
+        }
+
+        // Any workspace resize (window resize, or the bar hiding/showing in zen mode)
+        // should rescale panels to fill the new space instead of leaving them stranded.
+        let wsW = ws.clientWidth,
+          wsH = ws.clientHeight;
+        new ResizeObserver(() => {
+          const w = ws.clientWidth,
+            h = ws.clientHeight;
+          const rx = wsW ? w / wsW : 1,
+            ry = wsH ? h / wsH : 1;
+          if (rx !== 1 || ry !== 1) {
+            panels.forEach((p) => {
+              if (!p.max) {
+                p.x = Math.round(p.x * rx);
+                p.y = Math.round(p.y * ry);
+                p.w = Math.max(MIN_W, Math.round(p.w * rx));
+                p.h = Math.max(MIN_H, Math.round(p.h * ry));
+              }
+              apply(p);
+            });
+            renderZones();
+            save();
+          }
+          wsW = w;
+          wsH = h;
+        }).observe(ws);
+
+        // Clicking inside an iframe doesn't bubble to the page, but it does blur the window.
+        window.addEventListener("blur", () =>
+          setTimeout(() => {
+            const a = document.activeElement;
+            if (a && a.tagName === "IFRAME") {
+              const id = a.closest(".panel")?.dataset.id;
+              const p = panels.find((x) => x.id === id);
+              if (p) raise(p);
+            }
+          }, 0),
+        );
+
+        /* ---------- boot ---------- */
+        let saved = null;
+        try {
+          saved = JSON.parse(localStorage.getItem(STORE));
+        } catch {}
+        if (saved && Array.isArray(saved.panels)) {
+          snapEl.checked = saved.snap !== false;
+          gridEl.checked = saved.grid !== false;
+          if (typeof saved.layout === "string") layout = saved.layout;
+          if (saved.placeMode === "drop") placeMode = "drop";
+          slotsEl.checked = saved.slots !== false;
+          if (Array.isArray(saved.zones) && layout && layout !== "auto")
+            zones = saved.zones.filter(
+              (c) =>
+                Array.isArray(c) && c.length === 4 && c.every(Number.isFinite),
+            );
+          load(saved.panels.map(clean));
+          setLocked(!!saved.locked);
+          setZen(!!saved.zen);
+        } else {
+          load(DEFAULT_SITES.map((s) => clean({ ...s })));
+          tile(false);
+        }
+        ws.classList.toggle("grid", gridEl.checked);
+        renderZones();
+        markLayout();
+      })();
+    </script>
+  </body>
 </html>
