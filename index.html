@@ -246,6 +246,15 @@
       .ib.x:hover {
         background: var(--danger);
       }
+      .ib[data-a="span"] {
+        display: none;
+      }
+      #ws.masonry .ib[data-a="span"] {
+        display: grid;
+      }
+      #ws.masonry-rows .ib[data-a="span"] svg {
+        transform: rotate(90deg);
+      }
       .ib svg {
         width: 15px;
         height: 15px;
@@ -694,6 +703,9 @@
       body.zen .body {
         border-radius: 0;
       }
+      body.zen #zones {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -781,6 +793,11 @@
         <label class="chk" id="slotsLbl"
           ><input type="checkbox" id="slots" checked /> Show slots</label
         >
+        <label
+          class="chk"
+          title="In a chosen layout, resizing a window moves its neighbours too"
+          ><input type="checkbox" id="adjust" checked /> Auto-adjust</label
+        >
         <button class="btn" id="lock" aria-pressed="false">Lock layout</button>
         <button class="btn" id="zen" title="Hide chrome, Esc to exit">
           Zen mode
@@ -863,6 +880,7 @@
         const snapEl = $("snap"),
           gridEl = $("grid"),
           slotsEl = $("slots"),
+          adjustEl = $("adjust"),
           lockBtn = $("lock");
 
         const ICONS = {
@@ -870,6 +888,7 @@
           open: '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
           edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
           max: '<rect x="5" y="5" width="14" height="14" rx="1.5"/>',
+          span: '<path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/>',
           close: '<path d="M6 6l12 12M18 6L6 18"/>',
         };
         const icon = (k) =>
@@ -928,6 +947,7 @@
                 snap: snapEl.checked,
                 grid: gridEl.checked,
                 slots: slotsEl.checked,
+                adjust: adjustEl.checked,
                 panels,
               }),
             );
@@ -1027,11 +1047,16 @@
             .join("");
         }
 
-        function applyLayout(cells, id, animate = true) {
+        function applyLayout(
+          cells,
+          id,
+          animate = true,
+          arrange = placeMode !== "drop",
+        ) {
           // Auto tile (also what first load and Reset use) isn't a chosen layout, so it leaves no drop slots.
           zones = id === "auto" ? [] : cells;
           renderZones();
-          if (placeMode === "drop" && id !== "auto") {
+          if (!arrange && id !== "auto") {
             layout = id;
             markLayout();
             save();
@@ -1095,67 +1120,164 @@
         // Used when panels are all the same size (e.g. straight after a grid), which would otherwise just give another grid.
         const STAGGER = [1.4, 0.7, 1.1, 1.2, 0.8, 0.9];
 
-        // Scale shares (summing to 1) so none is below `min`, keeping the rest proportional.
-        function fitMin(fs, min) {
-          if (min * fs.length >= 1) return fs.map(() => 1 / fs.length);
-          const fixed = new Set();
-          for (;;) {
-            const free = fs.map((_, i) => i).filter((i) => !fixed.has(i));
-            const room = 1 - fixed.size * min,
-              sum = free.reduce((a, i) => a + fs[i], 0);
-            const out = fs.map((f, i) =>
-              fixed.has(i) ? min : (f / sum) * room,
-            );
-            const low = free.filter((i) => out[i] < min);
-            if (!low.length) return out;
-            low.forEach((i) => fixed.add(i));
-          }
-        }
-
-        // `min` is the smallest share a panel may get along its column (so it stays above MIN_W/MIN_H).
-        function masonryCells(weights, cols, rows, min = 0) {
+        // Masonry packing where a panel may span several columns. Each panel goes where the
+        // columns under it are lowest; shorter columns stretch their trailing panels (or a
+        // wide panel that ends them) to meet it, so the result has no gaps. Sizes are in
+        // arbitrary height units; `total` is the tallest column.
+        function packMasonry(weights, spans, cols) {
           const colH = Array(cols).fill(0),
-            colOf = weights.map((w) => {
-              const c = colH.indexOf(Math.min(...colH));
-              colH[c] += w;
-              return c;
-            });
-          const share = weights.map(() => 0);
-          for (let c = 0; c < cols; c++) {
-            const idx = colOf
-              .map((cc, i) => (cc === c ? i : -1))
-              .filter((i) => i >= 0);
-            fitMin(
-              idx.map((i) => weights[i] / colH[c]),
-              min,
-            ).forEach((f, k) => {
-              share[idx[k]] = f;
-            });
-          }
-          const top = Array(cols).fill(0);
-          return weights.map((w, i) => {
-            const c = colOf[i],
-              f = share[i],
-              at = top[c];
-            top[c] += f;
-            return rows
-              ? [at, c / cols, f, 1 / cols]
-              : [c / cols, at, 1 / cols, f];
+            colItems = Array.from({ length: cols }, () => []),
+            items = [];
+          const trailing = (k) => {
+            // single-column panels at the bottom of column k
+            const run = [];
+            for (
+              let j = colItems[k].length - 1;
+              j >= 0 && items[colItems[k][j]].s === 1;
+              j--
+            )
+              run.unshift(colItems[k][j]);
+            return run;
+          };
+          const lastWide = (k) => {
+            // a wide panel ending column k that also ends all its other columns
+            const last = colItems[k].at(-1);
+            if (last === undefined) return null;
+            const L = items[last];
+            for (let j = L.c; j < L.c + L.s; j++)
+              if (colItems[j].at(-1) !== last) return null;
+            return L;
+          };
+          const canRaise = (k, to) =>
+            colH[k] >= to - 1e-9 || trailing(k).length > 0 || !!lastWide(k);
+          const raiseCol = (k, to) => {
+            if (colH[k] >= to - 1e-9) return;
+            const run = trailing(k);
+            if (run.length) {
+              const start = items[run[0]].top,
+                f = (to - start) / (colH[k] - start);
+              run.forEach((i) => {
+                const it = items[i];
+                it.top = start + (it.top - start) * f;
+                it.h *= f;
+              });
+              colH[k] = to;
+            } else {
+              const L = lastWide(k);
+              L.h = to - L.top;
+              for (let j = L.c; j < L.c + L.s; j++) colH[j] = to;
+            }
+          };
+          const place = (i, s) => {
+            let best = null;
+            for (let c = 0; c + s <= cols; c++) {
+              let top = 0;
+              for (let k = c; k < c + s; k++) top = Math.max(top, colH[k]);
+              let ok = true;
+              for (let k = c; k < c + s && ok; k++) ok = canRaise(k, top);
+              if (ok && (!best || top < best.top - 1e-9)) best = { c, top };
+            }
+            if (!best) return false;
+            for (let k = best.c; k < best.c + s; k++) raiseCol(k, best.top);
+            items[i] = { c: best.c, s, top: best.top, h: weights[i] };
+            for (let k = best.c; k < best.c + s; k++) {
+              colH[k] = best.top + weights[i];
+              colItems[k].push(i);
+            }
+            return true;
+          };
+          // A wide panel that can't sit anywhere yet waits for later panels; if it never can, it narrows.
+          const pending = [];
+          weights.forEach((_, i) => {
+            if (!place(i, spans[i])) {
+              pending.push(i);
+              return;
+            }
+            for (let j = 0; j < pending.length; ) {
+              if (place(pending[j], spans[pending[j]])) {
+                pending.splice(j, 1);
+                j = 0;
+              } else j++;
+            }
           });
+          pending.forEach((i) => {
+            let s = spans[i];
+            while (!place(i, s)) s--;
+          });
+          const total = Math.max(...colH),
+            gaps = [];
+          for (let k = 0; k < cols; k++) {
+            if (colH[k] >= total - 1e-9) continue;
+            if (canRaise(k, total)) raiseCol(k, total);
+            else {
+              gaps.push({ c: k, s: 1, top: colH[k], h: total - colH[k] });
+              colH[k] = total;
+            }
+          }
+          // A gap left at the bottom of a column (e.g. under a wide panel with too few panels below it)
+          // is covered by widening the panels beside it, when they start level with the gap.
+          const covers = (it, k) => k >= it.c && k < it.c + it.s;
+          const open = new Set(gaps.map((g) => g.c)); // columns whose gap isn't covered yet
+          const widen = (gap) =>
+            [gap.c - 1, gap.c + 1].some((j) => {
+              if (j < 0 || j >= cols || open.has(j)) return false;
+              const run = items.filter(
+                (it) => covers(it, j) && it.top >= gap.top - 1e-9,
+              );
+              if (!run.some((it) => Math.abs(it.top - gap.top) < 1e-9))
+                return false;
+              run.forEach((it) => {
+                if (j > gap.c) it.c--;
+                it.s++;
+              });
+              open.delete(gap.c);
+              return true;
+            });
+          let holes = gaps,
+            before;
+          do {
+            before = holes.length;
+            holes = holes.filter((g) => !widen(g));
+          } while (holes.length && holes.length < before);
+          return { items, holes, total };
         }
 
-        function masonry(m, animate = true) {
-          const autoCols =
-            panels.length <= 2
-              ? panels.length
-              : Math.max(
-                  2,
-                  Math.min(
-                    Math.ceil(panels.length / 2),
-                    Math.round(ws.clientWidth / 420),
-                  ),
-                );
-          const cols = m.cols || autoCols;
+        // Cells for each panel, then one per gap the packing couldn't fill (those get an empty panel).
+        // `min` is the smallest share a panel may get along its column (so it stays above MIN_W/MIN_H).
+        function masonryCells(weights, spans, cols, rows, min = 0) {
+          const w = weights.slice();
+          let out;
+          for (let tries = 0; tries < 8; tries++) {
+            out = packMasonry(w, spans, cols);
+            const small = out.items
+              .map((it, i) => (it.h / out.total < min ? i : -1))
+              .filter((i) => i >= 0);
+            if (!small.length) break;
+            small.forEach((i) => {
+              w[i] = Math.max(w[i], min * out.total * 1.15);
+            });
+          }
+          const cell = ({ c, s, top, h }) =>
+            rows
+              ? [top / out.total, c / cols, h / out.total, s / cols]
+              : [c / cols, top / out.total, s / cols, h / out.total];
+          return [...out.items, ...out.holes].map(cell);
+        }
+
+        const masonryCols = (m) =>
+          m.cols ||
+          (panels.length <= 2
+            ? panels.length
+            : Math.max(
+                2,
+                Math.min(
+                  Math.ceil(panels.length / 2),
+                  Math.round(ws.clientWidth / 420),
+                ),
+              ));
+
+        function masonry(m, animate = true, arrange) {
+          const cols = masonryCols(m);
           const n = Math.max(panels.length, cols); // fixed-column variants get an empty panel per missing column
           if (!n) return;
           const sizes = panels.map((p) => (m.rows ? p.w : p.h));
@@ -1167,10 +1289,40 @@
               ? STAGGER[i % STAGGER.length]
               : sizes[i] / avg,
           );
+          const spans = Array.from({ length: n }, (_, i) =>
+            Math.min(cols, i < panels.length ? panels[i].span || 1 : 1),
+          );
           const min = m.rows
             ? (MIN_W + GAP) / (ws.clientWidth - GAP)
             : (MIN_H + GAP) / (ws.clientHeight - GAP);
-          applyLayout(masonryCells(weights, cols, m.rows, min), m.id, animate);
+          applyLayout(
+            masonryCells(weights, spans, cols, m.rows, min),
+            m.id,
+            animate,
+            arrange,
+          );
+        }
+
+        // Title-bar button: widen a panel across 1, 2 … all columns (rows for row variants).
+        function cycleSpan(p) {
+          const m = MASONRY.find((x) => x.id === layout);
+          if (!m) return;
+          const cols = masonryCols(m);
+          p.span = (p.span || 1) >= cols ? 1 : (p.span || 1) + 1;
+          masonry(m, true, true);
+          toast(
+            `“${p.title || hostOf(p.url) || "Panel"}” now spans ${p.span} of ${cols} ${m.rows ? "rows" : "columns"}.`,
+          );
+        }
+        // In masonry a panel's span follows the slot it sits in.
+        function spanFromCell(cell) {
+          const m = MASONRY.find((x) => x.id === layout);
+          if (!m) return 1;
+          const cols = masonryCols(m);
+          return Math.min(
+            cols,
+            Math.max(1, Math.round((m.rows ? cell[3] : cell[2]) * cols)),
+          );
         }
 
         function tile(animate = true) {
@@ -1192,10 +1344,30 @@
             p.w = ws.clientWidth;
             p.h = ws.clientHeight;
           }
-          el.style.left = p.x + "px";
-          el.style.top = p.y + "px";
-          el.style.width = p.w + "px";
-          el.style.height = p.h + "px";
+          let { x, y, w, h } = p;
+          if (zen && !p.max) {
+            // Zen closes the gaps: grow each panel into the gutters around it (a pixel of
+            // overlap hides rounding) and out to the workspace edge. Stored positions are untouched.
+            const W = ws.clientWidth,
+              H = ws.clientHeight,
+              g = GAP / 2 + 1;
+            let l = x - g,
+              t = y - g,
+              r = x + w + g,
+              b = y + h + g;
+            if (l <= GAP) l = 0;
+            if (t <= GAP) t = 0;
+            if (r >= W - GAP) r = W;
+            if (b >= H - GAP) b = H;
+            x = l;
+            y = t;
+            w = r - l;
+            h = b - t;
+          }
+          el.style.left = x + "px";
+          el.style.top = y + "px";
+          el.style.width = w + "px";
+          el.style.height = h + "px";
           el.style.zIndex = p.z;
           el.classList.toggle("max", !!p.max);
         }
@@ -1221,6 +1393,7 @@
           <button class="ib" data-a="reload" title="Reload" aria-label="Reload">${icon("reload")}</button>
           <button class="ib" data-a="open" title="Open in new tab" aria-label="Open in new tab">${icon("open")}</button>
           <button class="ib" data-a="edit" title="Edit name and address" aria-label="Edit">${icon("edit")}</button>
+          <button class="ib" data-a="span" title="Span more columns (click to cycle)" aria-label="Span more columns">${icon("span")}</button>
           <button class="ib" data-a="max" title="Maximize / restore" aria-label="Maximize or restore">${icon("max")}</button>
           <button class="ib x" data-a="close" title="Remove panel" aria-label="Remove panel">${icon("close")}</button>
         </div>
@@ -1247,6 +1420,7 @@
               reload: () => reload(p),
               open: () => p.url && window.open(p.url, "_blank", "noopener"),
               edit: () => openDialog(p),
+              span: () => cycleSpan(p),
               max: () => toggleMax(p),
               close: () => remove(p),
             })[b.dataset.a]();
@@ -1369,6 +1543,7 @@
           const i = panels.indexOf(p),
             j = panels.indexOf(t);
           [panels[i], panels[j]] = [panels[j], panels[i]]; // so re-applying a layout keeps the new order
+          if (layout.startsWith("masonry")) [p.span, t.span] = [t.span, p.span];
           [p, t].forEach((q) => {
             animateEl(elOf(q.id));
             apply(q);
@@ -1458,6 +1633,7 @@
               if (occ) swap(p, occ, from);
               else {
                 Object.assign(p, slots[s]);
+                p.span = spanFromCell(zones[s]);
                 animateEl(el);
               }
             } else if (t) swap(p, t, from);
@@ -1471,47 +1647,84 @@
         }
 
         /* ---------- resize ---------- */
-        // In a masonry layout, edges are shared dividers: resizing a panel moves the whole
-        // column (or row) boundary, or trades space with the panel next to it in its column.
-        function masonryResize(e, p, handle) {
-          if (!layout.startsWith("masonry") || !zones.length) return false;
+        // With Auto-adjust on, a chosen layout's edges are shared dividers. Dragging one moves the
+        // whole divider: every slot that ends or starts on that line and is connected along it to
+        // this panel (a full column boundary, the boundary below a wide panel, or just a neighbour).
+        function linkedResize(e, p, handle) {
+          if (!adjustEl.checked || !zones.length) return false;
           const pi = zones.findIndex((c) => sameRect(p, cellRect(c)));
           if (pi < 0) return false;
-          const rows = layout.startsWith("masonry-r");
           const occ = zones.map((c) => {
             const r = cellRect(c);
             return panels.find((q) => !q.max && sameRect(q, r)) || null;
           });
-
-          // Work in major (across columns) / minor (down a column) terms so rows reuse the same code.
-          const toMM = (c) =>
-            rows
-              ? { a: c[1], as: c[3], b: c[0], bs: c[2] }
-              : { a: c[0], as: c[2], b: c[1], bs: c[3] };
-          const fromMM = (m) =>
-            rows ? [m.b, m.a, m.bs, m.as] : [m.a, m.b, m.as, m.bs];
-          const base = zones.map(toMM);
-          const starts = [...new Set(base.map((m) => m.a.toFixed(4)))]
-            .map(Number)
-            .sort((a, b) => a - b);
-          const groups = starts.map((st) =>
-            base
-              .map((_, i) => i)
-              .filter((i) => Math.abs(base[i].a - st) < 1e-4)
-              .sort((i, j) => base[i].b - base[j].b),
-          );
-          const g = groups.findIndex((gr) => gr.includes(pi)),
-            pos = groups[g].indexOf(pi);
-
-          const d = handle.dataset.d;
+          const base = zones.map((c) => c.slice());
           const W = ws.clientWidth - GAP,
-            H = ws.clientHeight - GAP;
-          const majFar = d.includes(rows ? "s" : "e"),
-            majNear = d.includes(rows ? "n" : "w");
-          const minFar = d.includes(rows ? "e" : "s"),
-            minNear = d.includes(rows ? "w" : "n");
-          const minMaj = ((rows ? MIN_H : MIN_W) + GAP) / (rows ? H : W);
-          const minMin = ((rows ? MIN_W : MIN_H) + GAP) / (rows ? W : H);
+            H = ws.clientHeight - GAP,
+            EPS = 1e-4;
+
+          // axis 0: a vertical line (x), axis 1: a horizontal line (y). far: the panel's right/bottom edge.
+          const divider = (axis, far) => {
+            const o = 1 - axis;
+            const st = (c) => c[axis],
+              en = (c) => c[axis] + c[axis + 2];
+            const line = far ? en(base[pi]) : st(base[pi]);
+            const before = new Set(),
+              after = new Set();
+            (far ? before : after).add(pi);
+            let lo = base[pi][o],
+              hi = base[pi][o] + base[pi][o + 2],
+              grew = true;
+            while (grew) {
+              grew = false;
+              base.forEach((c, i) => {
+                if (before.has(i) || after.has(i)) return;
+                const ends = Math.abs(en(c) - line) < EPS,
+                  starts = Math.abs(st(c) - line) < EPS;
+                if (
+                  (!ends && !starts) ||
+                  c[o] + c[o + 2] < lo - EPS ||
+                  c[o] > hi + EPS
+                )
+                  return;
+                (ends ? before : after).add(i);
+                lo = Math.min(lo, c[o]);
+                hi = Math.max(hi, c[o] + c[o + 2]);
+                grew = true;
+              });
+            }
+            if (!before.size || !after.size) return null;
+            const min = axis ? (MIN_H + GAP) / H : (MIN_W + GAP) / W;
+            const lower = Math.min(
+              line,
+              Math.max(...[...before].map((i) => st(base[i]))) + min,
+            );
+            const upper = Math.max(
+              line,
+              Math.min(...[...after].map((i) => en(base[i]))) - min,
+            );
+            return {
+              axis,
+              line,
+              before: [...before],
+              after: [...after],
+              lower,
+              upper,
+            };
+          };
+          const d = handle.dataset.d;
+          const dividers = [
+            d.includes("e")
+              ? divider(0, true)
+              : d.includes("w")
+                ? divider(0, false)
+                : null,
+            d.includes("s")
+              ? divider(1, true)
+              : d.includes("n")
+                ? divider(1, false)
+                : null,
+          ].filter(Boolean);
 
           e.preventDefault();
           e.stopPropagation();
@@ -1521,45 +1734,21 @@
           ws.classList.add("busy");
           handle.setPointerCapture(e.pointerId);
           const move = (ev) => {
-            const dMaj = rows ? (ev.clientY - sy) / H : (ev.clientX - sx) / W;
-            const dMin = rows ? (ev.clientX - sx) / W : (ev.clientY - sy) / H;
-            const m = base.map((o) => ({ ...o }));
-            // Move the boundary between column k and k+1.
-            const moveMajor = (k) => {
-              if (k < 0 || k + 1 >= groups.length) return;
-              const L = base[groups[k][0]],
-                R = base[groups[k + 1][0]];
-              const edge = Math.min(
-                Math.max(R.a + R.as - minMaj, R.a),
-                Math.max(Math.min(L.a + minMaj, R.a), R.a + dMaj),
-              );
-              groups[k].forEach((i) => {
-                m[i].as = edge - base[i].a;
+            const m = base.map((c) => c.slice());
+            dividers.forEach(({ axis, line, before, after, lower, upper }) => {
+              const delta = axis
+                ? (ev.clientY - sy) / H
+                : (ev.clientX - sx) / W;
+              const edge = Math.min(upper, Math.max(lower, line + delta));
+              before.forEach((i) => {
+                m[i][axis + 2] = edge - base[i][axis];
               });
-              groups[k + 1].forEach((i) => {
-                m[i].as = base[i].a + base[i].as - edge;
-                m[i].a = edge;
+              after.forEach((i) => {
+                m[i][axis + 2] = base[i][axis] + base[i][axis + 2] - edge;
+                m[i][axis] = edge;
               });
-            };
-            // Move the boundary between items k and k+1 of this column.
-            const moveMinor = (k) => {
-              const gr = groups[g];
-              if (k < 0 || k + 1 >= gr.length) return;
-              const T = base[gr[k]],
-                B = base[gr[k + 1]];
-              const edge = Math.min(
-                Math.max(B.b + B.bs - minMin, B.b),
-                Math.max(Math.min(T.b + minMin, B.b), B.b + dMin),
-              );
-              m[gr[k]].bs = edge - T.b;
-              m[gr[k + 1]].bs = B.b + B.bs - edge;
-              m[gr[k + 1]].b = edge;
-            };
-            if (majFar) moveMajor(g);
-            else if (majNear) moveMajor(g - 1);
-            if (minFar) moveMinor(pos);
-            else if (minNear) moveMinor(pos - 1);
-            zones = m.map(fromMM);
+            });
+            zones = m;
             zones.forEach((c, i) => {
               if (occ[i]) {
                 Object.assign(occ[i], cellRect(c));
@@ -1583,7 +1772,7 @@
 
         function startResize(e, p, handle) {
           if (locked || p.max || e.button > 0) return;
-          if (masonryResize(e, p, handle)) return;
+          if (linkedResize(e, p, handle)) return;
           e.preventDefault();
           e.stopPropagation();
           raise(p);
@@ -1750,6 +1939,7 @@
             n = cols * (m.rows ? 2 : 3) - 1;
           const cells = masonryCells(
             Array.from({ length: n }, (_, i) => STAGGER[i % STAGGER.length]),
+            Array(n).fill(1),
             cols,
             m.rows,
           );
@@ -1770,6 +1960,12 @@
 
         function markLayout() {
           syncSlots();
+          ws.classList.toggle("masonry", layout.startsWith("masonry"));
+          ws.classList.toggle("masonry-rows", layout.startsWith("masonry-r"));
+          ws.querySelectorAll('.ib[data-a="span"]').forEach((b) => {
+            b.title =
+              b.ariaLabel = `Span more ${layout.startsWith("masonry-r") ? "rows" : "columns"} (click to cycle)`;
+          });
           menu
             .querySelectorAll("[data-l]")
             .forEach((b) =>
@@ -1840,6 +2036,7 @@
           syncSlots();
           save();
         };
+        adjustEl.onchange = save;
         function setLocked(v) {
           locked = v;
           lockBtn.setAttribute("aria-pressed", String(v));
@@ -1852,6 +2049,7 @@
         function setZen(v) {
           zen = v;
           document.body.classList.toggle("zen", v);
+          panels.forEach(apply);
           save();
         }
         $("zen").onclick = () => setZen(!zen);
@@ -1913,6 +2111,7 @@
             h: Math.max(MIN_H, +p.h || 300),
             z: +p.z || 1,
             max: false,
+            span: Math.max(1, Math.round(+p.span) || 1),
           };
         }
 
@@ -1973,6 +2172,7 @@
           if (typeof saved.layout === "string") layout = saved.layout;
           if (saved.placeMode === "drop") placeMode = "drop";
           slotsEl.checked = saved.slots !== false;
+          adjustEl.checked = saved.adjust !== false;
           if (Array.isArray(saved.zones) && layout && layout !== "auto")
             zones = saved.zones.filter(
               (c) =>
