@@ -461,7 +461,7 @@
         top: calc(100% + 8px);
         left: 0;
         z-index: 1;
-        width: min(360px, calc(100vw - 32px));
+        width: min(380px, calc(100vw - 32px));
         padding: 12px;
         display: none;
         max-height: calc(100vh - 70px);
@@ -499,141 +499,52 @@
         color: #fff;
       }
 
-      .tabs {
+      .styles {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .style {
+        display: grid;
+        justify-items: center;
         gap: 3px;
-        padding: 3px;
-        background: #1c2623;
-        border-radius: 9px;
-      }
-      .tabs button {
-        border: 0;
-        border-radius: 7px;
-        padding: 6px 0;
-        font-size: 13px;
-        font-weight: 500;
-        background: transparent;
-        color: var(--bar-muted);
-      }
-      .tabs button:hover {
-        color: var(--bar-text);
-      }
-      .tabs button[aria-selected="true"] {
-        background: #3a4c45;
-        color: #fff;
-      }
-      .tabpane {
-        display: grid;
-        gap: 10px;
-      }
-      .tabpane[hidden] {
-        display: none;
-      }
-
-      .lay-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-      }
-      .lay-grid.four {
-        grid-template-columns: repeat(4, 1fr);
-      }
-      .lay {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 5px;
-        padding: 8px 3px 6px;
+        padding: 12px 6px 10px;
         background: transparent;
         color: var(--bar-text);
         border: 1px solid #3f4f48;
-        border-radius: 9px;
-        font-size: 11.5px;
+        border-radius: 12px;
+        text-align: center;
       }
-      .lay:hover {
-        background: #33443e;
+      .style:hover {
+        background: #2e3d38;
+        border-color: #56685f;
       }
-      .lay svg {
-        width: 56px;
-        height: 37px;
+      .style svg {
+        width: 64px;
+        height: 42px;
+        margin-bottom: 5px;
         display: block;
       }
-      .lay rect {
+      .style rect {
         fill: #5f736b;
+        stroke: var(--bar);
+        stroke-width: 1.5;
       }
-      .lay[aria-checked="true"] {
-        border-color: var(--accent);
-        background: rgba(224, 165, 38, 0.1);
-      }
-      .lay[aria-checked="true"] rect {
-        fill: var(--accent);
-      }
-      .lay.wide {
-        flex-direction: row;
-        justify-content: center;
-        font-size: 13px;
-        padding: 8px 10px;
-      }
-
-      .custom {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px 14px;
-        align-items: center;
-      }
-      .stepper {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        font-size: 13px;
-        color: var(--bar-text);
-      }
-      .stepper div {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .stepper button {
-        width: 28px;
-        height: 28px;
-        border-radius: 7px;
-        border: 1px solid #47574f;
-        background: transparent;
-        color: var(--bar-text);
-        font-size: 16px;
-        line-height: 1;
-      }
-      .stepper button:hover {
-        background: #33443e;
-      }
-      .stepper output {
-        min-width: 18px;
-        text-align: center;
+      .style b {
+        font-size: 13.5px;
         font-weight: 600;
       }
-      .preview {
-        grid-row: span 2;
+      .style small {
+        font-size: 11.5px;
+        line-height: 1.3;
+        color: var(--bar-muted);
       }
-      .preview svg {
-        width: 96px;
-        height: 64px;
-        display: block;
+      .style[aria-checked="true"] {
+        border-color: var(--accent);
+        background: rgba(224, 165, 38, 0.12);
       }
-      .preview rect {
+      .style[aria-checked="true"] rect {
         fill: var(--accent);
-      }
-      .custom .btn {
-        grid-column: 1 / -1;
-        justify-content: center;
-      }
-
-      .menu-foot {
-        display: grid;
-        gap: 8px;
-        padding-top: 10px;
-        border-top: 1px solid #3f4f48;
       }
 
       /* switches (used for every on/off option) */
@@ -976,75 +887,13 @@
             Layout: <b id="layoutName">Free-form</b> ▾
           </button>
           <div class="menu" id="layoutMenu" aria-label="Layouts">
-            <div class="tabs" role="tablist">
-              <button role="tab" data-tab="grid" aria-selected="true">
-                Grid
-              </button>
-              <button role="tab" data-tab="masonry" aria-selected="false">
-                Masonry
-              </button>
-              <button role="tab" data-tab="custom" aria-selected="false">
-                Custom
-              </button>
-            </div>
-            <section class="tabpane" data-pane="grid" role="tabpanel">
-              <div class="lay-grid four" id="layGrid"></div>
-            </section>
-            <section class="tabpane" data-pane="masonry" role="tabpanel" hidden>
-              <p class="note">
-                Staggered windows of different heights. Use the ↔ button on a
-                window to let it span more columns.
-              </p>
-              <div class="lay-grid" id="masonryGrid"></div>
-            </section>
-            <section class="tabpane" data-pane="custom" role="tabpanel" hidden>
-              <div class="custom">
-                <div class="stepper">
-                  Columns
-                  <div>
-                    <button
-                      data-step="c"
-                      data-d="-1"
-                      aria-label="Fewer columns"
-                    >
-                      −</button
-                    ><output id="cColsOut">3</output
-                    ><button data-step="c" data-d="1" aria-label="More columns">
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div class="preview" id="cPreview"></div>
-                <div class="stepper">
-                  Rows
-                  <div>
-                    <button data-step="r" data-d="-1" aria-label="Fewer rows">
-                      −</button
-                    ><output id="cRowsOut">2</output
-                    ><button data-step="r" data-d="1" aria-label="More rows">
-                      +
-                    </button>
-                  </div>
-                </div>
-                <button class="btn primary" id="cApply">Use 3 × 2 grid</button>
-              </div>
-            </section>
-            <div class="menu-foot">
-              <label class="switch"
-                ><input type="checkbox" id="placeAuto" checked /><span
-                  >Move windows into place</span
-                ></label
-              >
-              <p class="note" id="placeNote"></p>
-              <button
-                class="lay wide"
-                data-l="auto"
-                aria-checked="false"
-                title="Arrange every window evenly and clear the layout"
-              >
-                Free-form · tidy every window, no layout
-              </button>
-            </div>
+            <div
+              class="styles"
+              id="styleGrid"
+              role="radiogroup"
+              aria-label="Arrange windows"
+            ></div>
+            <p class="note">Tip: drag a window onto another to swap them.</p>
           </div>
         </div>
         <span class="spacer"></span>
@@ -1241,9 +1090,8 @@
         let zenGaps = false; // keep the space between windows in zen
         let uid = 0;
         let lastRemoved = null;
-        let layout = "auto"; // id of the layout last applied
+        let layout = "free"; // current style: grid, columns, rows, focus, masonry or free
         let zones = []; // that layout's cells, kept as slots panels can be dropped into
-        let placeMode = "auto"; // "auto": picking a layout moves panels; "drop": it only shows the slots
 
         /* ---------- helpers ---------- */
         const snapv = (v) =>
@@ -1285,7 +1133,6 @@
                 zenGaps,
                 layout,
                 zones,
-                placeMode,
                 snap: snapEl.checked,
                 grid: gridEl.checked,
                 slots: slotsEl.checked,
@@ -1306,59 +1153,104 @@
             1 / rows,
           ]);
 
-        const LAYOUTS = [
-          { id: "1", name: "Single", cells: gridCells(1, 1) },
-          { id: "2c", name: "2 columns", cells: gridCells(2, 1) },
-          { id: "3c", name: "3 columns", cells: gridCells(3, 1) },
-          { id: "4c", name: "4 columns", cells: gridCells(4, 1) },
-          { id: "2r", name: "2 rows", cells: gridCells(1, 2) },
-          { id: "2x2", name: "2 × 2", cells: gridCells(2, 2) },
-          { id: "3x2", name: "3 × 2", cells: gridCells(3, 2) },
+        // A short last row stretches so the grid never leaves a hole.
+        function gridIn(n, cols, [x0, y0, w0, h0] = [0, 0, 1, 1]) {
+          const rows = Math.ceil(n / cols),
+            out = [];
+          for (let r = 0; r < rows; r++) {
+            const k = r < rows - 1 ? cols : n - cols * (rows - 1);
+            for (let c = 0; c < k; c++)
+              out.push([
+                x0 + (w0 * c) / k,
+                y0 + (h0 * r) / rows,
+                w0 / k,
+                h0 / rows,
+              ]);
+          }
+          return out;
+        }
+        const autoCols = (n) =>
+          n <= 3 ? n : n <= 6 ? 3 : Math.ceil(Math.sqrt(n));
+
+        // Every style fits however many windows there are.
+        const STYLES = [
           {
-            id: "side",
-            name: "Main + side",
-            cells: [
-              [0, 0, 2 / 3, 1],
-              [2 / 3, 0, 1 / 3, 1],
-            ],
+            id: "grid",
+            name: "Grid",
+            desc: "Even tiles",
+            cells: (n) => gridIn(n, autoCols(n)),
+          },
+          {
+            id: "columns",
+            name: "Columns",
+            desc: "Side by side",
+            cells: (n) => gridIn(n, n),
+          },
+          {
+            id: "rows",
+            name: "Rows",
+            desc: "Stacked",
+            cells: (n) => gridIn(n, 1),
           },
           {
             id: "focus",
             name: "Focus",
-            cells: [
-              [0, 0, 0.25, 1],
-              [0.25, 0, 0.5, 1],
-              [0.75, 0, 0.25, 1],
-            ],
+            desc: "One big, rest beside",
+            cells: (n) =>
+              n < 2
+                ? [[0, 0, 1, 1]]
+                : [
+                    [0, 0, 0.62, 1],
+                    ...gridIn(n - 1, n - 1 <= 3 ? 1 : 2, [0.62, 0, 0.38, 1]),
+                  ],
           },
-          {
-            id: "l1r2",
-            name: "1 + 2",
-            cells: [
-              [0, 0, 0.5, 1],
-              [0.5, 0, 0.5, 0.5],
-              [0.5, 0.5, 0.5, 0.5],
-            ],
-          },
-          {
-            id: "l2r1",
-            name: "2 + 1",
-            cells: [
-              [0, 0, 0.5, 0.5],
-              [0, 0.5, 0.5, 0.5],
-              [0.5, 0, 0.5, 1],
-            ],
-          },
-          {
-            id: "t1b2",
-            name: "1 over 2",
-            cells: [
-              [0, 0, 1, 0.5],
-              [0, 0.5, 0.5, 0.5],
-              [0.5, 0.5, 0.5, 0.5],
-            ],
-          },
+          { id: "masonry", name: "Masonry", desc: "Staggered heights" },
+          { id: "free", name: "Free", desc: "Place them yourself" },
         ];
+        // Layouts saved by earlier versions map onto the nearest style.
+        function styleOf(id) {
+          if (STYLES.some((x) => x.id === id)) return id;
+          if (/^masonry/.test(id)) return "masonry";
+          if (["2c", "3c", "4c"].includes(id)) return "columns";
+          if (id === "2r") return "rows";
+          if (["side", "focus", "l1r2", "l2r1", "t1b2"].includes(id))
+            return "focus";
+          if (["1", "2x2", "3x2"].includes(id) || /^custom-/.test(id))
+            return "grid";
+          return "free";
+        }
+
+        function applyStyle(id, animate = true) {
+          if (id === "free") {
+            layout = "free";
+            zones = [];
+            renderZones();
+            markLayout();
+            save();
+            return;
+          }
+          if (id === "masonry") {
+            masonry(MASONRY[0], animate);
+            return;
+          }
+          if (!panels.length) {
+            layout = id;
+            zones = [];
+            renderZones();
+            markLayout();
+            save();
+            return;
+          }
+          applyLayout(
+            STYLES.find((x) => x.id === id).cells(panels.length),
+            id,
+            animate,
+          );
+        }
+        // Adding or closing a window re-fits the current style.
+        const refit = () => {
+          if (layout !== "free") applyStyle(layout);
+        };
 
         function animateEl(el) {
           el.classList.add("anim");
@@ -1389,24 +1281,10 @@
             .join("");
         }
 
-        function applyLayout(
-          cells,
-          id,
-          animate = true,
-          arrange = placeMode !== "drop",
-        ) {
-          // Auto tile (also what first load and Reset use) isn't a chosen layout, so it leaves no drop slots.
-          zones = id === "auto" ? [] : cells;
+        function applyLayout(cells, id, animate = true) {
+          // The first-load / Reset tidy-up isn't a chosen style, so it leaves no slots.
+          zones = id === "free" ? [] : cells;
           renderZones();
-          if (!arrange && id !== "auto") {
-            layout = id;
-            markLayout();
-            save();
-            toast(
-              "Drag each panel into a slot. Drop on a filled slot to swap.",
-            );
-            return;
-          }
           const need = cells.length;
           for (let i = panels.length - 1; i >= 0 && panels.length > need; i--) {
             if (!panels[i].url) {
@@ -1451,14 +1329,7 @@
         // Masonry: equal-width columns, each panel dropped into the shortest column and
         // keeping its size relative to the others, then every column stretched to fill.
         // "rows" variants do the same sideways: equal-height rows of varying widths.
-        const MASONRY = [
-          { id: "masonry", name: "Auto" },
-          { id: "masonry-2", name: "2 columns", cols: 2 },
-          { id: "masonry-3", name: "3 columns", cols: 3 },
-          { id: "masonry-4", name: "4 columns", cols: 4 },
-          { id: "masonry-r2", name: "2 rows", cols: 2, rows: true },
-          { id: "masonry-r3", name: "3 rows", cols: 3, rows: true },
-        ];
+        const MASONRY = [{ id: "masonry", name: "Masonry" }];
         // Used when panels are all the same size (e.g. straight after a grid), which would otherwise just give another grid.
         const STAGGER = [1.4, 0.7, 1.1, 1.2, 0.8, 0.9];
 
@@ -1618,7 +1489,7 @@
                 ),
               ));
 
-        function masonry(m, animate = true, arrange) {
+        function masonry(m, animate = true) {
           const cols = masonryCols(m);
           const n = Math.max(panels.length, cols); // fixed-column variants get an empty panel per missing column
           if (!n) return;
@@ -1641,7 +1512,6 @@
             masonryCells(weights, spans, cols, m.rows, min),
             m.id,
             animate,
-            arrange,
           );
         }
 
@@ -1651,7 +1521,7 @@
           if (!m) return;
           const cols = masonryCols(m);
           p.span = (p.span || 1) >= cols ? 1 : (p.span || 1) + 1;
-          masonry(m, true, true);
+          masonry(m, true);
           toast(
             `“${p.title || hostOf(p.url) || "Panel"}” now spans ${p.span} of ${cols} ${m.rows ? "rows" : "columns"}.`,
           );
@@ -1670,9 +1540,7 @@
         function tile(animate = true) {
           const n = panels.length;
           if (!n) return;
-          const cols = n <= 3 ? n : n <= 6 ? 3 : Math.ceil(Math.sqrt(n));
-          const rows = Math.ceil(n / cols);
-          applyLayout(gridCells(cols, rows).slice(0, n), "auto", animate);
+          applyLayout(gridIn(n, autoCols(n)), "free", animate);
         }
 
         const elOf = (id) => ws.querySelector(`[data-id="${id}"]`);
@@ -1840,6 +1708,7 @@
           panels = panels.filter((x) => x !== p);
           el.remove();
           syncEmpty();
+          refit();
           save();
           toast(`Removed “${p.title || hostOf(p.url) || "panel"}”`, () => {
             const r = lastRemoved;
@@ -1848,6 +1717,7 @@
             build(r.p);
             raise(r.p);
             syncEmpty();
+            refit();
             save();
           });
         }
@@ -2234,6 +2104,7 @@
             build(p);
             raise(p);
             syncEmpty();
+            refit();
           }
           save();
         });
@@ -2279,7 +2150,6 @@
         const closeMenus = () => openMenu(null);
         menus.forEach(([b, m]) => {
           b.onclick = () => {
-            if (m === menu) showTab(tabFor());
             openMenu(m.classList.contains("open") ? null : m);
           };
         });
@@ -2303,71 +2173,19 @@
                 `<rect x="${x * 60 + 1.5}" y="${y * 40 + 1.5}" width="${w * 60 - 3}" height="${h * 40 - 3}" rx="2"/>`,
             )
             .join("")}</svg>`;
-        $("layGrid").innerHTML = LAYOUTS.map(
-          (l) =>
-            `<button class="lay" role="menuitemradio" aria-checked="false" data-l="${l.id}">${thumb(l.cells)}${l.name}</button>`,
+        const styleThumb = (st) =>
+          st.id === "masonry"
+            ? masonryCells([1.4, 0.7, 1.1, 1.2, 0.8], Array(5).fill(1), 3)
+            : st.id === "free"
+              ? [
+                  [0.04, 0.1, 0.5, 0.58],
+                  [0.4, 0.32, 0.56, 0.6],
+                ]
+              : st.cells(5);
+        $("styleGrid").innerHTML = STYLES.map(
+          (st) =>
+            `<button class="style" role="radio" aria-checked="false" data-l="${st.id}">${thumb(styleThumb(st))}<b>${st.name}</b><small>${st.desc}</small></button>`,
         ).join("");
-        $("masonryGrid").innerHTML = MASONRY.map((m) => {
-          const cols = m.cols || 3,
-            n = cols * (m.rows ? 2 : 3) - 1;
-          const cells = masonryCells(
-            Array.from({ length: n }, (_, i) => STAGGER[i % STAGGER.length]),
-            Array(n).fill(1),
-            cols,
-            m.rows,
-          );
-          return `<button class="lay" role="menuitemradio" aria-checked="false" data-l="${m.id}">${thumb(cells)}${m.name}</button>`;
-        }).join("");
-
-        const tabFor = () =>
-          layout.startsWith("masonry")
-            ? "masonry"
-            : layout.startsWith("custom")
-              ? "custom"
-              : "grid";
-        function showTab(t) {
-          menu
-            .querySelectorAll("[data-tab]")
-            .forEach((b) =>
-              b.setAttribute("aria-selected", String(b.dataset.tab === t)),
-            );
-          menu.querySelectorAll("[data-pane]").forEach((p) => {
-            p.hidden = p.dataset.pane !== t;
-          });
-        }
-
-        function layoutLabel() {
-          const l = LAYOUTS.find((x) => x.id === layout);
-          if (l) return l.name;
-          const m = MASONRY.find((x) => x.id === layout);
-          if (m) return m.id === "masonry" ? "Masonry" : `Masonry, ${m.name}`;
-          const c = /^custom-(\d+)x(\d+)$/.exec(layout);
-          if (c) return `${c[1]} × ${c[2]} grid`;
-          return "Free-form";
-        }
-
-        // Custom grid steppers with a live preview.
-        let cCols = 3,
-          cRows = 2;
-        function renderCustom() {
-          $("cColsOut").textContent = cCols;
-          $("cRowsOut").textContent = cRows;
-          $("cPreview").innerHTML = thumb(gridCells(cCols, cRows));
-          $("cApply").textContent = `Use ${cCols} × ${cRows} grid`;
-        }
-        menu.querySelectorAll("[data-step]").forEach(
-          (b) =>
-            (b.onclick = () => {
-              if (b.dataset.step === "c")
-                cCols = Math.min(6, Math.max(1, cCols + +b.dataset.d));
-              else cRows = Math.min(4, Math.max(1, cRows + +b.dataset.d));
-              renderCustom();
-            }),
-        );
-        $("cApply").onclick = () => {
-          applyLayout(gridCells(cCols, cRows), `custom-${cCols}x${cRows}`);
-          closeMenus();
-        };
 
         // Slot outlines can be hidden for regular layouts; masonry always shows them.
         // They still appear while dragging either way, so dropping into slots keeps working.
@@ -2392,40 +2210,16 @@
           menu
             .querySelectorAll("[data-l]")
             .forEach((b) =>
-              b.setAttribute(
-                "aria-checked",
-                String(b.dataset.l === (layout || "auto")),
-              ),
+              b.setAttribute("aria-checked", String(b.dataset.l === layout)),
             );
-          $("layoutName").textContent = layoutLabel();
-          $("placeAuto").checked = placeMode === "auto";
-          $("placeNote").textContent =
-            placeMode === "auto"
-              ? "Picking a layout moves your windows into it. Turn off to get empty slots and drag windows in yourself."
-              : "Picking a layout shows empty slots. Drag each window into the one you want.";
-          const m = /^custom-(\d+)x(\d+)$/.exec(layout);
-          if (m) {
-            cCols = +m[1];
-            cRows = +m[2];
-          }
-          renderCustom();
+          $("layoutName").textContent = STYLES.find(
+            (x) => x.id === layout,
+          ).name;
         }
-        menu
-          .querySelectorAll("[data-tab]")
-          .forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
-        $("placeAuto").onchange = () => {
-          placeMode = $("placeAuto").checked ? "auto" : "drop";
-          markLayout();
-          save();
-        };
         menu.addEventListener("click", (e) => {
           const b = e.target.closest("[data-l]");
           if (!b) return;
-          const l = LAYOUTS.find((x) => x.id === b.dataset.l),
-            m = MASONRY.find((x) => x.id === b.dataset.l);
-          if (l) applyLayout(l.cells, l.id);
-          else if (m) masonry(m);
-          else tile(true);
+          applyStyle(b.dataset.l);
           closeMenus();
         });
         snapEl.onchange = save;
@@ -2551,7 +2345,7 @@
             if (!Array.isArray(data.panels)) throw new Error();
             load(data.panels.map(clean));
             zones = [];
-            layout = "";
+            layout = "free";
             renderZones();
             markLayout();
             save();
@@ -2641,11 +2435,10 @@
         if (saved && Array.isArray(saved.panels)) {
           snapEl.checked = saved.snap !== false;
           gridEl.checked = saved.grid !== false;
-          if (typeof saved.layout === "string") layout = saved.layout;
-          if (saved.placeMode === "drop") placeMode = "drop";
+          if (typeof saved.layout === "string") layout = styleOf(saved.layout);
           slotsEl.checked = saved.slots !== false;
           adjustEl.checked = saved.adjust !== false;
-          if (Array.isArray(saved.zones) && layout && layout !== "auto")
+          if (Array.isArray(saved.zones) && layout !== "free")
             zones = saved.zones.filter(
               (c) =>
                 Array.isArray(c) && c.length === 4 && c.every(Number.isFinite),
