@@ -108,21 +108,6 @@
         border-color: #f0d38a;
         color: #2a2208;
       }
-      .chk {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13.5px;
-        color: var(--bar-muted);
-        cursor: pointer;
-      }
-      .chk input {
-        accent-color: var(--accent);
-      }
-      .chk.off {
-        opacity: 0.5;
-        cursor: default;
-      }
       :focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
@@ -467,7 +452,7 @@
         opacity: 1;
       }
 
-      /* layout menu */
+      /* popover menus (Layout, Options) */
       .menu-wrap {
         position: relative;
       }
@@ -476,51 +461,102 @@
         top: calc(100% + 8px);
         left: 0;
         z-index: 1;
-        width: min(312px, calc(100vw - 32px));
+        width: min(360px, calc(100vw - 32px));
         padding: 12px;
         display: none;
         max-height: calc(100vh - 70px);
         overflow-y: auto;
         background: var(--bar);
         border: 1px solid #47574f;
-        border-radius: 10px;
+        border-radius: 12px;
         box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+      }
+      .menu.right {
+        left: auto;
+        right: 0;
+        width: min(320px, calc(100vw - 32px));
       }
       .menu.open {
         display: grid;
         gap: 10px;
       }
       .menu h3 {
-        margin: 0;
-        font-size: 11.5px;
+        margin: 4px 0 -2px;
+        font-size: 11px;
         font-weight: 600;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.6px;
         text-transform: uppercase;
         color: var(--bar-muted);
       }
+      .note {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--bar-muted);
+      }
+      #layoutBtn b {
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3px;
+        padding: 3px;
+        background: #1c2623;
+        border-radius: 9px;
+      }
+      .tabs button {
+        border: 0;
+        border-radius: 7px;
+        padding: 6px 0;
+        font-size: 13px;
+        font-weight: 500;
+        background: transparent;
+        color: var(--bar-muted);
+      }
+      .tabs button:hover {
+        color: var(--bar-text);
+      }
+      .tabs button[aria-selected="true"] {
+        background: #3a4c45;
+        color: #fff;
+      }
+      .tabpane {
+        display: grid;
+        gap: 10px;
+      }
+      .tabpane[hidden] {
+        display: none;
+      }
+
       .lay-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 6px;
+      }
+      .lay-grid.four {
+        grid-template-columns: repeat(4, 1fr);
       }
       .lay {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 5px;
-        padding: 7px 4px 6px;
+        padding: 8px 3px 6px;
         background: transparent;
         color: var(--bar-text);
-        border: 1px solid #47574f;
-        border-radius: 8px;
+        border: 1px solid #3f4f48;
+        border-radius: 9px;
         font-size: 11.5px;
       }
       .lay:hover {
         background: #33443e;
       }
       .lay svg {
-        width: 60px;
-        height: 40px;
+        width: 56px;
+        height: 37px;
         display: block;
       }
       .lay rect {
@@ -528,57 +564,162 @@
       }
       .lay[aria-checked="true"] {
         border-color: var(--accent);
+        background: rgba(224, 165, 38, 0.1);
       }
       .lay[aria-checked="true"] rect {
         fill: var(--accent);
       }
-      .seg {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-      }
-      .seg button {
-        padding: 7px 6px;
-        font-size: 12.5px;
-        color: var(--bar-text);
-        background: transparent;
-        border: 1px solid #47574f;
-        border-radius: 8px;
-      }
-      .seg button:hover {
-        background: #33443e;
-      }
-      .seg button[aria-checked="true"] {
-        border-color: var(--accent);
-        background: rgba(224, 165, 38, 0.16);
-      }
       .lay.wide {
         flex-direction: row;
         justify-content: center;
+        font-size: 13px;
+        padding: 8px 10px;
+      }
+
+      .custom {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 14px;
+        align-items: center;
+      }
+      .stepper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         gap: 8px;
         font-size: 13px;
-        padding: 7px 10px;
+        color: var(--bar-text);
       }
-      .custom {
+      .stepper div {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 13px;
-        color: var(--bar-muted);
       }
-      .custom input {
-        width: 48px;
-        padding: 5px 6px;
-        font: inherit;
-        font-size: 13px;
-        color: var(--bar-text);
-        background: #1c2623;
+      .stepper button {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
         border: 1px solid #47574f;
-        border-radius: 6px;
+        background: transparent;
+        color: var(--bar-text);
+        font-size: 16px;
+        line-height: 1;
+      }
+      .stepper button:hover {
+        background: #33443e;
+      }
+      .stepper output {
+        min-width: 18px;
+        text-align: center;
+        font-weight: 600;
+      }
+      .preview {
+        grid-row: span 2;
+      }
+      .preview svg {
+        width: 96px;
+        height: 64px;
+        display: block;
+      }
+      .preview rect {
+        fill: var(--accent);
       }
       .custom .btn {
-        margin-left: auto;
-        padding: 5px 10px;
+        grid-column: 1 / -1;
+        justify-content: center;
+      }
+
+      .menu-foot {
+        display: grid;
+        gap: 8px;
+        padding-top: 10px;
+        border-top: 1px solid #3f4f48;
+      }
+
+      /* switches (used for every on/off option) */
+      .switch,
+      .opt {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: start;
+        cursor: pointer;
+      }
+      .switch {
+        align-items: center;
+        font-size: 13.5px;
+        color: var(--bar-text);
+      }
+      .opt {
+        padding: 7px 6px;
+        margin: 0 -6px;
+        border-radius: 8px;
+      }
+      .opt:hover {
+        background: #2e3d38;
+      }
+      .opt b {
+        display: block;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--bar-text);
+      }
+      .opt small {
+        display: block;
+        margin-top: 2px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--bar-muted);
+      }
+      .opt.off {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .switch input,
+      .opt input {
+        appearance: none;
+        -webkit-appearance: none;
+        margin: 1px 0 0;
+        flex: none;
+        cursor: inherit;
+        width: 34px;
+        height: 20px;
+        border-radius: 999px;
+        background: #47574f;
+        position: relative;
+        transition: background 0.15s;
+      }
+      .switch input::after,
+      .opt input::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform 0.15s;
+      }
+      .switch input:checked,
+      .opt input:checked {
+        background: var(--accent);
+      }
+      .switch input:checked::after,
+      .opt input:checked::after {
+        transform: translateX(14px);
+      }
+      .row3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .row3 .btn {
+        justify-content: center;
+      }
+      .btn.danger:hover {
+        background: var(--danger);
+        border-color: var(--danger);
       }
 
       /* dialog */
@@ -696,15 +837,126 @@
       body.zen .h {
         display: none;
       }
-      body.zen .panel {
+      body.zen:not(.zen-gaps) .panel {
         border-radius: 0;
         box-shadow: none;
       }
-      body.zen .body {
+      body.zen:not(.zen-gaps) .body {
         border-radius: 0;
+      }
+      body.zen.zen-gaps .body {
+        border-radius: var(--radius);
       }
       body.zen #zones {
         display: none;
+      }
+
+      /* Keys pressed inside an embedded site never reach this page, so zen also has a
+     mouse exit: touching the top edge of the screen slides down an exit bar. */
+      #zenEdge,
+      #zenExit {
+        display: none;
+      }
+      body.zen #zenEdge {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        z-index: 300000;
+      }
+      /* The zen bar is a notch hanging from the top edge: a small tab while collapsed that
+     opens out into the controls. Its "ears" curve into the edge like a laptop notch. */
+      body.zen #zenExit {
+        --ear: 12px;
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 50%;
+        z-index: 300001;
+        transform: translateX(-50%);
+        padding: 0 var(--ear);
+        color: var(--bar-text);
+        font-size: 13px;
+        clip-path: inset(
+          0 calc(50% - 34px) calc(100% - 7px) calc(50% - 34px) round 0 0 7px 7px
+        );
+        transition: clip-path 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      body.zen #zenExit.show {
+        clip-path: inset(0 0 -20px 0 round 0 0 0 0);
+      }
+      #zenExit::before,
+      #zenExit::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: var(--ear);
+        height: var(--ear);
+      }
+      #zenExit::before {
+        left: 0;
+        background: radial-gradient(
+          circle at 0 100%,
+          transparent calc(var(--ear) - 0.5px),
+          var(--bar) var(--ear)
+        );
+      }
+      #zenExit::after {
+        right: 0;
+        background: radial-gradient(
+          circle at 100% 100%,
+          transparent calc(var(--ear) - 0.5px),
+          var(--bar) var(--ear)
+        );
+      }
+      .notch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 9px 10px 18px;
+        background: var(--bar);
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+      }
+      .notch span {
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        margin-right: 4px;
+        white-space: nowrap;
+      }
+      #zenExit button {
+        border: 0;
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: var(--accent);
+        color: #2a2208;
+      }
+      #zenExit button:hover {
+        background: #ecb537;
+      }
+      #zenExit button.ghost {
+        background: transparent;
+        color: var(--bar-text);
+        border: 1px solid #47574f;
+        font-weight: 500;
+      }
+      #zenExit button.ghost:hover {
+        background: #33443e;
+      }
+      #zenExit button.ghost[aria-pressed="true"] {
+        background: #f0d38a;
+        border-color: #f0d38a;
+        color: #2a2208;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        body.zen #zenExit {
+          transition: none;
+        }
       }
     </style>
   </head>
@@ -721,91 +973,162 @@
             aria-expanded="false"
             aria-controls="layoutMenu"
           >
-            Layout ▾
+            Layout: <b id="layoutName">Free-form</b> ▾
           </button>
-          <div class="menu" id="layoutMenu" role="menu" aria-label="Layouts">
-            <h3>When I pick a layout</h3>
-            <div
-              class="seg"
-              role="radiogroup"
-              aria-label="When I pick a layout"
-            >
-              <button
-                role="radio"
-                aria-checked="true"
-                data-mode="auto"
-                title="Panels move into the layout straight away"
-              >
-                Auto-arrange
+          <div class="menu" id="layoutMenu" aria-label="Layouts">
+            <div class="tabs" role="tablist">
+              <button role="tab" data-tab="grid" aria-selected="true">
+                Grid
               </button>
-              <button
-                role="radio"
-                aria-checked="false"
-                data-mode="drop"
-                title="Show empty slots; drag each panel into the one you want"
-              >
-                Drop in myself
+              <button role="tab" data-tab="masonry" aria-selected="false">
+                Masonry
+              </button>
+              <button role="tab" data-tab="custom" aria-selected="false">
+                Custom
               </button>
             </div>
-            <button
-              class="lay wide"
-              role="menuitemradio"
-              aria-checked="false"
-              data-l="auto"
-              title="Fit every panel in an even grid"
-            >
-              Auto tile (fit every panel)
-            </button>
-            <h3>Presets</h3>
-            <div class="lay-grid" id="layGrid"></div>
-            <h3>Masonry</h3>
-            <div class="lay-grid" id="masonryGrid"></div>
-            <h3>Custom grid</h3>
-            <div class="custom">
-              <input
-                type="number"
-                id="cCols"
-                min="1"
-                max="6"
-                value="3"
-                aria-label="Columns"
-              />
-              columns ×
-              <input
-                type="number"
-                id="cRows"
-                min="1"
-                max="4"
-                value="2"
-                aria-label="Rows"
-              />
-              rows
-              <button class="btn" id="cApply">Apply</button>
+            <section class="tabpane" data-pane="grid" role="tabpanel">
+              <div class="lay-grid four" id="layGrid"></div>
+            </section>
+            <section class="tabpane" data-pane="masonry" role="tabpanel" hidden>
+              <p class="note">
+                Staggered windows of different heights. Use the ↔ button on a
+                window to let it span more columns.
+              </p>
+              <div class="lay-grid" id="masonryGrid"></div>
+            </section>
+            <section class="tabpane" data-pane="custom" role="tabpanel" hidden>
+              <div class="custom">
+                <div class="stepper">
+                  Columns
+                  <div>
+                    <button
+                      data-step="c"
+                      data-d="-1"
+                      aria-label="Fewer columns"
+                    >
+                      −</button
+                    ><output id="cColsOut">3</output
+                    ><button data-step="c" data-d="1" aria-label="More columns">
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div class="preview" id="cPreview"></div>
+                <div class="stepper">
+                  Rows
+                  <div>
+                    <button data-step="r" data-d="-1" aria-label="Fewer rows">
+                      −</button
+                    ><output id="cRowsOut">2</output
+                    ><button data-step="r" data-d="1" aria-label="More rows">
+                      +
+                    </button>
+                  </div>
+                </div>
+                <button class="btn primary" id="cApply">Use 3 × 2 grid</button>
+              </div>
+            </section>
+            <div class="menu-foot">
+              <label class="switch"
+                ><input type="checkbox" id="placeAuto" checked /><span
+                  >Move windows into place</span
+                ></label
+              >
+              <p class="note" id="placeNote"></p>
+              <button
+                class="lay wide"
+                data-l="auto"
+                aria-checked="false"
+                title="Arrange every window evenly and clear the layout"
+              >
+                Free-form · tidy every window, no layout
+              </button>
             </div>
           </div>
         </div>
-        <label class="chk"
-          ><input type="checkbox" id="snap" checked /> Snap to grid</label
-        >
-        <label class="chk"
-          ><input type="checkbox" id="grid" checked /> Show grid</label
-        >
-        <label class="chk" id="slotsLbl"
-          ><input type="checkbox" id="slots" checked /> Show slots</label
-        >
-        <label
-          class="chk"
-          title="In a chosen layout, resizing a window moves its neighbours too"
-          ><input type="checkbox" id="adjust" checked /> Auto-adjust</label
-        >
-        <button class="btn" id="lock" aria-pressed="false">Lock layout</button>
-        <button class="btn" id="zen" title="Hide chrome, Esc to exit">
+        <span class="spacer"></span>
+        <button class="btn" id="zen" title="Hide everything but your windows">
           Zen mode
         </button>
-        <span class="spacer"></span>
-        <button class="btn" id="export">Export layout</button>
-        <button class="btn" id="import">Import</button>
-        <button class="btn" id="reset">Reset</button>
+        <button
+          class="btn fsBtn"
+          aria-pressed="false"
+          title="Fill the whole screen, hiding the browser's tabs and address bar"
+        >
+          Full screen
+        </button>
+        <div class="menu-wrap">
+          <button
+            class="btn"
+            id="optBtn"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="optMenu"
+          >
+            Options ▾
+          </button>
+          <div class="menu right" id="optMenu" aria-label="Options">
+            <h3>Windows</h3>
+            <label class="opt"
+              ><input type="checkbox" id="adjust" checked /><span
+                ><b>Auto-adjust neighbours</b
+                ><small
+                  >In a layout, resizing a window resizes the ones next to
+                  it.</small
+                ></span
+              ></label
+            >
+            <label class="opt"
+              ><input type="checkbox" id="snap" checked /><span
+                ><b>Snap to grid</b
+                ><small>Windows you move line up neatly.</small></span
+              ></label
+            >
+            <label class="opt"
+              ><input type="checkbox" id="lock" /><span
+                ><b>Lock windows</b
+                ><small>Stop windows being moved or resized.</small></span
+              ></label
+            >
+            <h3>Desk</h3>
+            <label class="opt"
+              ><input type="checkbox" id="grid" checked /><span
+                ><b>Show grid</b></span
+              ></label
+            >
+            <label class="opt" id="slotsLbl"
+              ><input type="checkbox" id="slots" checked /><span
+                ><b>Show layout slots</b
+                ><small id="slotsNote"
+                  >Dashed outlines of the current layout.</small
+                ></span
+              ></label
+            >
+            <h3>Setup</h3>
+            <div class="row3">
+              <button
+                class="btn"
+                id="export"
+                title="Save your windows and layout to a file"
+              >
+                Export</button
+              ><button
+                class="btn"
+                id="import"
+                title="Load windows from a saved file"
+              >
+                Import</button
+              ><button
+                class="btn danger"
+                id="reset"
+                title="Go back to the default six windows"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
         <input type="file" id="file" accept="application/json" hidden />
       </div>
     </header>
@@ -848,6 +1171,23 @@
       </form>
     </dialog>
 
+    <div id="zenEdge" aria-hidden="true"></div>
+    <div id="zenExit">
+      <div class="notch">
+        <span>Zen mode</span>
+        <button
+          class="ghost"
+          id="zenGaps"
+          aria-pressed="false"
+          title="Keep the space between windows"
+        >
+          Gaps
+        </button>
+        <button class="ghost fsBtn" aria-pressed="false">Full screen</button>
+        <button id="zenOff">Exit zen</button>
+      </div>
+    </div>
+
     <div id="toast" role="status">
       <span id="toastMsg"></span><button id="toastUndo">Undo</button>
     </div>
@@ -881,7 +1221,7 @@
           gridEl = $("grid"),
           slotsEl = $("slots"),
           adjustEl = $("adjust"),
-          lockBtn = $("lock");
+          lockEl = $("lock");
 
         const ICONS = {
           reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
@@ -898,6 +1238,7 @@
         let zTop = 1;
         let locked = false;
         let zen = false;
+        let zenGaps = false; // keep the space between windows in zen
         let uid = 0;
         let lastRemoved = null;
         let layout = "auto"; // id of the layout last applied
@@ -941,6 +1282,7 @@
               JSON.stringify({
                 locked,
                 zen,
+                zenGaps,
                 layout,
                 zones,
                 placeMode,
@@ -1345,7 +1687,7 @@
             p.h = ws.clientHeight;
           }
           let { x, y, w, h } = p;
-          if (zen && !p.max) {
+          if (zen && !zenGaps && !p.max) {
             // Zen closes the gaps: grow each panel into the gutters around it (a pixel of
             // overlap hides rounding) and out to the workspace edge. Stored positions are untouched.
             const W = ws.clientWidth,
@@ -1918,11 +2260,42 @@
         /* ---------- toolbar ---------- */
         $("add").onclick = () => openDialog(null);
 
-        // layout menu
+        // ----- menus
         const menu = $("layoutMenu"),
           layoutBtn = $("layoutBtn"),
-          cCols = $("cCols"),
-          cRows = $("cRows");
+          optMenu = $("optMenu"),
+          optBtn = $("optBtn");
+        const menus = [
+          [layoutBtn, menu],
+          [optBtn, optMenu],
+        ];
+        function openMenu(which) {
+          menus.forEach(([b, m]) => {
+            const o = m === which;
+            m.classList.toggle("open", o);
+            b.setAttribute("aria-expanded", String(o));
+          });
+        }
+        const closeMenus = () => openMenu(null);
+        menus.forEach(([b, m]) => {
+          b.onclick = () => {
+            if (m === menu) showTab(tabFor());
+            openMenu(m.classList.contains("open") ? null : m);
+          };
+        });
+        document.addEventListener("pointerdown", (e) => {
+          if (!e.target.closest(".menu-wrap")) closeMenus();
+        });
+        window.addEventListener("blur", closeMenus);
+        window.addEventListener("keydown", (e) => {
+          const open = menus.find(([, m]) => m.classList.contains("open"));
+          if (e.key === "Escape" && open) {
+            closeMenus();
+            open[0].focus();
+          }
+        });
+
+        // ----- layout menu
         const thumb = (cells) =>
           `<svg viewBox="0 0 60 40" aria-hidden="true">${cells
             .map(
@@ -1946,6 +2319,56 @@
           return `<button class="lay" role="menuitemradio" aria-checked="false" data-l="${m.id}">${thumb(cells)}${m.name}</button>`;
         }).join("");
 
+        const tabFor = () =>
+          layout.startsWith("masonry")
+            ? "masonry"
+            : layout.startsWith("custom")
+              ? "custom"
+              : "grid";
+        function showTab(t) {
+          menu
+            .querySelectorAll("[data-tab]")
+            .forEach((b) =>
+              b.setAttribute("aria-selected", String(b.dataset.tab === t)),
+            );
+          menu.querySelectorAll("[data-pane]").forEach((p) => {
+            p.hidden = p.dataset.pane !== t;
+          });
+        }
+
+        function layoutLabel() {
+          const l = LAYOUTS.find((x) => x.id === layout);
+          if (l) return l.name;
+          const m = MASONRY.find((x) => x.id === layout);
+          if (m) return m.id === "masonry" ? "Masonry" : `Masonry, ${m.name}`;
+          const c = /^custom-(\d+)x(\d+)$/.exec(layout);
+          if (c) return `${c[1]} × ${c[2]} grid`;
+          return "Free-form";
+        }
+
+        // Custom grid steppers with a live preview.
+        let cCols = 3,
+          cRows = 2;
+        function renderCustom() {
+          $("cColsOut").textContent = cCols;
+          $("cRowsOut").textContent = cRows;
+          $("cPreview").innerHTML = thumb(gridCells(cCols, cRows));
+          $("cApply").textContent = `Use ${cCols} × ${cRows} grid`;
+        }
+        menu.querySelectorAll("[data-step]").forEach(
+          (b) =>
+            (b.onclick = () => {
+              if (b.dataset.step === "c")
+                cCols = Math.min(6, Math.max(1, cCols + +b.dataset.d));
+              else cRows = Math.min(4, Math.max(1, cRows + +b.dataset.d));
+              renderCustom();
+            }),
+        );
+        $("cApply").onclick = () => {
+          applyLayout(gridCells(cCols, cRows), `custom-${cCols}x${cRows}`);
+          closeMenus();
+        };
+
         // Slot outlines can be hidden for regular layouts; masonry always shows them.
         // They still appear while dragging either way, so dropping into slots keeps working.
         function syncSlots() {
@@ -1953,9 +2376,9 @@
           zonesEl.classList.toggle("hide-idle", !slotsEl.checked && !masonryOn);
           slotsEl.disabled = masonryOn;
           $("slotsLbl").classList.toggle("off", masonryOn);
-          $("slotsLbl").title = masonryOn
-            ? "Slots are always shown for masonry layouts"
-            : "Show the current layout's slots on the desk";
+          $("slotsNote").textContent = masonryOn
+            ? "Always shown for masonry layouts."
+            : "Dashed outlines of the current layout.";
         }
 
         function markLayout() {
@@ -1969,35 +2392,33 @@
           menu
             .querySelectorAll("[data-l]")
             .forEach((b) =>
-              b.setAttribute("aria-checked", String(b.dataset.l === layout)),
-            );
-          menu
-            .querySelectorAll("[data-mode]")
-            .forEach((b) =>
               b.setAttribute(
                 "aria-checked",
-                String(b.dataset.mode === placeMode),
+                String(b.dataset.l === (layout || "auto")),
               ),
             );
+          $("layoutName").textContent = layoutLabel();
+          $("placeAuto").checked = placeMode === "auto";
+          $("placeNote").textContent =
+            placeMode === "auto"
+              ? "Picking a layout moves your windows into it. Turn off to get empty slots and drag windows in yourself."
+              : "Picking a layout shows empty slots. Drag each window into the one you want.";
           const m = /^custom-(\d+)x(\d+)$/.exec(layout);
           if (m) {
-            cCols.value = m[1];
-            cRows.value = m[2];
+            cCols = +m[1];
+            cRows = +m[2];
           }
+          renderCustom();
         }
-        function setMenu(open) {
-          menu.classList.toggle("open", open);
-          layoutBtn.setAttribute("aria-expanded", String(open));
-        }
-        layoutBtn.onclick = () => setMenu(!menu.classList.contains("open"));
+        menu
+          .querySelectorAll("[data-tab]")
+          .forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+        $("placeAuto").onchange = () => {
+          placeMode = $("placeAuto").checked ? "auto" : "drop";
+          markLayout();
+          save();
+        };
         menu.addEventListener("click", (e) => {
-          const mb = e.target.closest("[data-mode]");
-          if (mb) {
-            placeMode = mb.dataset.mode;
-            markLayout();
-            save();
-            return;
-          }
           const b = e.target.closest("[data-l]");
           if (!b) return;
           const l = LAYOUTS.find((x) => x.id === b.dataset.l),
@@ -2005,27 +2426,7 @@
           if (l) applyLayout(l.cells, l.id);
           else if (m) masonry(m);
           else tile(true);
-          setMenu(false);
-        });
-        $("cApply").onclick = () => {
-          const c = Math.min(6, Math.max(1, Math.round(+cCols.value) || 1));
-          const r = Math.min(4, Math.max(1, Math.round(+cRows.value) || 1));
-          applyLayout(gridCells(c, r), `custom-${c}x${r}`);
-          setMenu(false);
-        };
-        menu.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" && e.target.matches("input"))
-            $("cApply").click();
-        });
-        document.addEventListener("pointerdown", (e) => {
-          if (!e.target.closest(".menu-wrap")) setMenu(false);
-        });
-        window.addEventListener("blur", () => setMenu(false));
-        window.addEventListener("keydown", (e) => {
-          if (e.key === "Escape" && menu.classList.contains("open")) {
-            setMenu(false);
-            layoutBtn.focus();
-          }
+          closeMenus();
         });
         snapEl.onchange = save;
         gridEl.onchange = () => {
@@ -2039,23 +2440,94 @@
         adjustEl.onchange = save;
         function setLocked(v) {
           locked = v;
-          lockBtn.setAttribute("aria-pressed", String(v));
-          lockBtn.textContent = v ? "Unlock layout" : "Lock layout";
+          lockEl.checked = v;
+          optBtn.textContent = v ? "Options · Locked ▾" : "Options ▾";
           ws.classList.toggle("locked", v);
           save();
         }
-        lockBtn.onclick = () => setLocked(!locked);
+        lockEl.onchange = () => setLocked(lockEl.checked);
 
-        function setZen(v) {
+        const zenExit = $("zenExit");
+        let zenHide;
+        function showZenExit(ms) {
+          zenExit.classList.add("show");
+          clearTimeout(zenHide);
+          if (ms)
+            zenHide = setTimeout(() => zenExit.classList.remove("show"), ms);
+        }
+        function setZen(v, announce) {
           zen = v;
           document.body.classList.toggle("zen", v);
           panels.forEach(apply);
+          if (!v) {
+            clearTimeout(zenHide);
+            zenExit.classList.remove("show");
+          } else if (announce) {
+            showZenExit(3500);
+            toast(
+              "Zen mode. To exit, move the mouse to the top edge of the screen or press Esc.",
+            );
+          }
           save();
         }
-        $("zen").onclick = () => setZen(!zen);
+        $("zen").onclick = () => setZen(!zen, true);
+        $("zenOff").onclick = () => setZen(false);
+
+        function setZenGaps(v) {
+          zenGaps = v;
+          document.body.classList.toggle("zen-gaps", v);
+          $("zenGaps").setAttribute("aria-pressed", String(v));
+          panels.forEach(apply);
+          save();
+        }
+        $("zenGaps").onclick = () => setZenGaps(!zenGaps);
+
+        // Browser full screen (hides tabs and the address bar). It can't be restored on reload:
+        // browsers only allow it in response to a click.
+        const fsEl = () =>
+          document.fullscreenElement || document.webkitFullscreenElement;
+        function toggleFullscreen() {
+          const root = document.documentElement;
+          const req = root.requestFullscreen || root.webkitRequestFullscreen;
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          try {
+            const r = fsEl() ? exit.call(document) : req.call(root);
+            if (r && r.catch)
+              r.catch(() => toast("Full screen isn’t available here."));
+          } catch {
+            toast("Full screen isn’t available here.");
+          }
+        }
+        const syncFullscreen = () =>
+          document.querySelectorAll(".fsBtn").forEach((b) => {
+            b.textContent = fsEl() ? "Exit full screen" : "Full screen";
+            b.setAttribute("aria-pressed", String(!!fsEl()));
+          });
+        document.querySelectorAll(".fsBtn").forEach((b) => {
+          b.onclick = toggleFullscreen;
+        });
+        document.addEventListener("fullscreenchange", syncFullscreen);
+        document.addEventListener("webkitfullscreenchange", syncFullscreen);
+        // Esc only reaches this page when focus isn't inside an embedded site.
         window.addEventListener("keydown", (e) => {
           if (e.key === "Escape" && zen) setZen(false);
         });
+        const reveal = () => {
+          // Take focus back from the embedded site so Esc works again too.
+          if (
+            document.activeElement &&
+            document.activeElement.tagName === "IFRAME"
+          )
+            document.activeElement.blur();
+          showZenExit(2500);
+        };
+        $("zenEdge").addEventListener("pointerenter", reveal);
+        $("zenEdge").addEventListener("pointerdown", reveal);
+        zenExit.addEventListener("pointerenter", () => {
+          reveal();
+          clearTimeout(zenHide);
+        });
+        zenExit.addEventListener("pointerleave", () => showZenExit(1200));
 
         $("export").onclick = () => {
           const blob = new Blob([JSON.stringify({ panels }, null, 2)], {
@@ -2180,6 +2652,7 @@
             );
           load(saved.panels.map(clean));
           setLocked(!!saved.locked);
+          setZenGaps(!!saved.zenGaps);
           setZen(!!saved.zen);
         } else {
           load(DEFAULT_SITES.map((s) => clean({ ...s })));
